@@ -12,13 +12,13 @@ from engine.generation.motion_planner import MotionPlanner
 from engine.generation.music_mapper import MusicMapper
 from engine.creative_director import CreativeDirector
 from engine.gap_analyzer import GapAnalyzer
-from config.constants import DNA
+from engine.dna_fusion import DNAFusion
 from utils.logger import logger
 from utils.exceptions import VPDError
 
 class Pipeline:
     """Orchestrate the entire AI workflow."""
-
+    
     def __init__(self):
         self.detector = get_detector()
         self.extractor = AttributeExtractor()
@@ -30,70 +30,76 @@ class Pipeline:
         self.music_mapper = MusicMapper()
         self.gap_analyzer = GapAnalyzer()
         self.creative_director = CreativeDirector()
-
+        self.dna_fusion = DNAFusion()
+    
     def run(self, image: Image.Image, project: ProjectState, dna: Dict) -> Dict[str, Any]:
-        """Execute full workflow."""
+        """Execute full workflow with DNA passed from app."""
         try:
             logger.info("Starting AI workflow pipeline...")
-
+            
             # 1. DETECTOR
             logger.info("  → Running Vision Detector...")
             det_result = self.detector.detect(image)
             project.detector_result = det_result.to_dict()
-
+            
             # 2. ATTRIBUTE EXTRACTOR
             logger.info("  → Extracting attributes...")
             attributes = self.extractor.extract(det_result)
-
+            
             # 3. SCENE MATCHER
             logger.info("  → Matching scene...")
             matched_scene = self.matcher.match(attributes, project.channel)
             if matched_scene:
                 project.matched_scene = matched_scene
                 logger.info(f"  → Matched Scene: {matched_scene.get('name')}")
-
+            
             # 4. SUGGEST ATTRIBUTES
             scene_name = matched_scene.get("name", "General") if matched_scene else "General"
             suggested = self.graph.suggest_attributes(scene_name, project.channel)
             attributes["suggested"] = suggested
-
-            # 5. GAP ANALYSIS
+            
+            # 5. GAP ANALYSIS (menggunakan DNA dari parameter)
             logger.info("  → Running Gap Analysis...")
             dna_channel = dna.get(project.channel, {})
             gap_result = self.gap_analyzer.analyze(det_result, dna_channel)
             project.gap_result = gap_result.to_dict()
-
+            
             # 6. CREATIVE DIRECTOR
             logger.info("  → Generating creative plan...")
             creative_plan = self.creative_director.generate(gap_result.to_dict(), dna_channel)
             project.creative_result = creative_plan.to_dict()
             project.final_prompt = creative_plan.final_prompt
-
+            
             # 7. VARIANT GENERATOR
             logger.info("  → Generating variants...")
             variants = self.variant_generator.generate(matched_scene or {}, attributes, project.channel)
             project.variants = variants
-
+            
             # 8. MOTION PLANNER
             logger.info("  → Planning motion...")
             motion = self.motion_planner.plan(matched_scene or {}, project.channel)
             project.motion_plan = motion
-
+            
             # 9. MUSIC MAPPER
             logger.info("  → Mapping music...")
             music = self.music_mapper.map(matched_scene or {}, project.channel)
             project.music_plan = music
-
-            # 10. KNOWLEDGE LEARN
+            
+            # 10. DNA FUSION
+            logger.info("  → Running DNA Fusion...")
+            fused = self.dna_fusion.fuse(attributes, project.channel)
+            project.fused_result = fused
+            
+            # 11. KNOWLEDGE LEARN
             logger.info("  → Updating knowledge database...")
             learned = self.learner.learn_from_project(
                 project.to_dict(),
                 attributes
             )
             project.learned = learned
-
+            
             logger.info("✅ Pipeline completed successfully.")
-
+            
             return {
                 "scene": matched_scene,
                 "attributes": attributes,
@@ -106,7 +112,7 @@ class Pipeline:
                 "learned": learned,
                 "final_prompt": creative_plan.final_prompt,
             }
-
+            
         except Exception as e:
             logger.error(f"Pipeline failed: {e}")
             raise VPDError(f"AI Workflow failed: {e}")

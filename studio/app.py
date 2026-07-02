@@ -345,10 +345,10 @@ elif menu == "🔍 Analyze":
                     project.matched_scene = result.get("scene")
                     project.extracted_attributes = result.get("attributes")
                     project.suggested_attributes = result.get("suggested")
-                    project.learned = result.get("learned")
-                    project.variants = result.get("variants")
-                    project.motion_plan = result.get("motion")
-                    project.music_plan = result.get("music")
+                    if hasattr(project, 'learned') and project.learned:
+                    if hasattr(project, 'variants') and project.variants:
+                    if hasattr(project, 'motion_plan') and project.motion_plan:
+                    if hasattr(project, 'music_plan') and project.music_plan:
                     
                     st.success("✅ AI Analysis Complete!")
                     
@@ -416,7 +416,7 @@ elif menu == "🔍 Analyze":
                     st.caption(f"✨ FX: {', '.join(attrs.get('fx', []))}")
             
             # --- Scene Detection ---
-            if project.matched_scene:
+            if hasattr(project, 'matched_scene') and project.matched_scene:
                 st.markdown("---")
                 st.subheader("🏠 Scene Detection")
                 scene = project.matched_scene
