@@ -345,10 +345,10 @@ elif menu == "🔍 Analyze":
                     project.matched_scene = result.get("scene")
                     project.extracted_attributes = result.get("attributes")
                     project.suggested_attributes = result.get("suggested")
-                    if hasattr(project, 'learned') and project.learned:
-                    if hasattr(project, 'variants') and project.variants:
-                    if hasattr(project, 'motion_plan') and project.motion_plan:
-                    if hasattr(project, 'music_plan') and project.music_plan:
+                    project.learned = result.get("learned")
+                    project.variants = result.get("variants")
+                    project.motion_plan = result.get("motion")
+                    project.music_plan = result.get("music")
                     
                     st.success("✅ AI Analysis Complete!")
                     
