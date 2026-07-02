@@ -1,4 +1,3 @@
-# models/detector_result.py
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional
 
@@ -31,8 +30,8 @@ class DetectorResult:
 @dataclass
 class GapItem:
     element: str
-    status: str           # "match" | "missing" | "conflict" | "extra"
-    priority: str         # "HIGH" | "MEDIUM" | "LOW"
+    status: str
+    priority: str
     reason: str = ""
     target: Optional[str] = None
 

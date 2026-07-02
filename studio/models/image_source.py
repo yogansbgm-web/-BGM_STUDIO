@@ -1,15 +1,14 @@
-# models/image_source.py
 from dataclasses import dataclass, field
 from datetime import datetime
 from PIL import Image
 import hashlib
 import io
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 
 @dataclass
 class ImageSource:
     image: Image.Image
-    source: str  # "upload" | "clipboard" | "url" | "youtube"
+    source: str
     filename: str = "untitled.png"
     width: int = 0
     height: int = 0
@@ -26,7 +25,6 @@ class ImageSource:
             self.width, self.height = self.image.size
             self.mode = self.image.mode
             self.format = self.image.format or "PNG"
-            # Compute stable hash (JPEG quality 85 for speed)
             try:
                 buffer = io.BytesIO()
                 self.image.convert("RGB").save(buffer, format="JPEG", quality=85)
