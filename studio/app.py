@@ -38,6 +38,27 @@ st.set_page_config(
 
 # ---- Load YAML data ----
 @st.cache_data(ttl=300)
+def load_dna():
+    file_path = DATA_DIR / "channel_dna.yaml"
+    with open(file_path, "r") as f:
+        return yaml.safe_load(f)
+
+@st.cache_data(ttl=300)
+def load_knowledge():
+    file_path = DATA_DIR / "knowledge_graph.yaml"
+    with open(file_path, "r") as f:
+        return yaml.safe_load(f)
+
+@st.cache_data(ttl=300)
+def load_bgm():
+    try:
+        file_path = DATA_DIR / "bgm_studio.yaml"
+        with open(file_path, "r") as f:
+            return yaml.safe_load(f)
+    except FileNotFoundError:
+        return {}
+
+@st.cache_data(ttl=300)
 def load_vpos():
     try:
         world_path = DATA_DIR / "vpos_world.yaml"
