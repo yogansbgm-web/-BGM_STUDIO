@@ -1,6 +1,8 @@
-# VPD v7.1 - AI Creative Studio (FINAL)
+# VPD v7.1 - AI Creative Studio (INPUT HUB - CLEAN)
 # Streamlit UI - Adobe Lightroom + VSCode Style
-# Integrated: BGM Studio + AI Creative Director + Gap Analysis + Link Input
+# Integrated: BGM Studio + AI Creative Director + Gap Analysis
+# Input Hub: Upload, Paste, URL, YouTube, Riset
+# NO components.html - CLEAN VERSION
 
 import streamlit as st
 import yaml
@@ -10,75 +12,36 @@ import datetime
 from pathlib import Path
 from PIL import Image
 import numpy as np
-import streamlit.components.v1 as components
-import base64
 import io
 import requests
 import re
 from urllib.parse import urlparse
+from dataclasses import dataclass
+from typing import Optional
 
-# --- Path Base (folder tempat app.py aya) ---
+# --- IMPORT PASTE BUTTON (Library stabil) ---
+from streamlit_paste_button import paste_image_button
+
+# --- DATA CLASS: Input Source ---
+@dataclass
+class ImageSource:
+    image: Image.Image
+    source: str  # "upload", "clipboard", "url", "youtube"
+    filename: str = "untitled.png"
+    width: int = 0
+    height: int = 0
+    metadata: dict = None
+
+    def __post_init__(self):
+        if self.image:
+            self.width, self.height = self.image.size
+        if self.metadata is None:
+            self.metadata = {}
+
+# --- Path Base ---
 BASE_DIR = Path(__file__).parent
 
-# --- KOMPONEN PASTE GAMBAR (Ctrl+V) ---
-def paste_image_component():
-    html_code = """
-    <div id="paste-box" style="border: 2px dashed #ccc; padding: 20px; text-align: center; border-radius: 10px; background-color: #f9f9f9; min-height: 100px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
-        <span id="paste-label">📋 Klik di dieu, teras pencét Ctrl+V (atawa Cmd+V) pikeun nempel gambar</span>
-    </div>
-    <script>
-    const box = document.getElementById('paste-box');
-    const label = document.getElementById('paste-label');
-
-    box.addEventListener('paste', function(e) {
-        e.preventDefault();
-        const items = e.clipboardData.items;
-        let found = false;
-
-        for (let item of items) {
-            if (item.type.startsWith('image/')) {
-                const blob = item.getAsFile();
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    const dataUrl = event.target.result;
-                    label.innerHTML = '✅ Gambar hasil ditempel! (Ukuran: ' + blob.size + ' bytes)';
-                    box.style.borderColor = 'green';
-                    window.parent.postMessage({
-                        type: 'streamlit:setComponentValue',
-                        value: dataUrl
-                    }, '*');
-                };
-                reader.readAsDataURL(blob);
-                found = true;
-                break;
-            }
-        }
-
-        if (!found) {
-            label.innerHTML = '❌ Henteu aya gambar dina clipboard. Copy gambar heula!';
-            box.style.borderColor = 'red';
-            setTimeout(() => {
-                label.innerHTML = '📋 Klik di dieu, teras pencét Ctrl+V (atawa Cmd+V) pikeun nempel gambar';
-                box.style.borderColor = '#ccc';
-            }, 3000);
-        }
-    });
-    </script>
-    """
-    
-    data = components.html(html_code, height=150, key="paste_component")
-    
-    if data:
-        try:
-            header, encoded = data.split(',', 1)
-            img_data = base64.b64decode(encoded)
-            return Image.open(io.BytesIO(img_data))
-        except Exception as e:
-            st.error(f"Error decoding image: {e}")
-            return None
-    return None
-
-# --- Fungsi pikeun ngundeur gambar tina URL ---
+# --- Fungsi Download Gambar ---
 def download_image_from_url(url):
     try:
         response = requests.get(url, timeout=10)
@@ -89,15 +52,36 @@ def download_image_from_url(url):
         st.error(f"Gagal ngundeur gambar: {e}")
         return None
 
-# --- Fungsi pikeun ékstrak YouTube thumbnail ---
+# --- Fungsi YouTube Thumbnail (dengan fallback) ---
 def get_youtube_thumbnail(url):
     pattern = r'(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})'
     match = re.search(pattern, url)
     if match:
         video_id = match.group(1)
-        thumbnail_url = f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg"
-        return thumbnail_url, video_id
+        # Coba maxresdefault heula, fallback ka hqdefault
+        thumbnail_urls = [
+            f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg",
+            f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg",
+            f"https://img.youtube.com/vi/{video_id}/sddefault.jpg"
+        ]
+        return thumbnail_urls, video_id
     return None, None
+
+# --- Helper: Set Image Source ---
+def set_image_source(img: Image.Image, source: str, filename: str = "untitled.png"):
+    if img:
+        st.session_state.image_source = ImageSource(
+            image=img,
+            source=source,
+            filename=filename
+        )
+        return True
+    return False
+
+def get_current_image():
+    if st.session_state.image_source:
+        return st.session_state.image_source.image
+    return None
 
 # --- Konfigurasi Halaman ---
 st.set_page_config(
@@ -137,8 +121,8 @@ CHANNEL_NAMES = list(DNA.keys())
 # --- Session State ---
 if 'current_channel' not in st.session_state:
     st.session_state.current_channel = "JAZZ"
-if 'uploaded_image' not in st.session_state:
-    st.session_state.uploaded_image = None
+if 'image_source' not in st.session_state:
+    st.session_state.image_source = None
 if 'detection_result' not in st.session_state:
     st.session_state.detection_result = {}
 if 'gap_analysis' not in st.session_state:
@@ -150,7 +134,7 @@ if 'final_prompt' not in st.session_state:
 if 'research_links' not in st.session_state:
     st.session_state.research_links = []
 
-# --- SIDEBAR (8 MENU) ---
+# --- SIDEBAR ---
 with st.sidebar:
     st.image("https://placehold.co/200x60/1a1a1a/FFB800?text=VPD+STUDIO", use_column_width=True)
     st.markdown("---")
@@ -193,41 +177,43 @@ if menu == "🏠 Home":
 
 elif menu == "📂 Project":
     st.title("📂 Project Workspace")
+    st.caption("INPUT HUB — Sadaya sumber gambar dihijikeun")
     
-    # --- BAGIAN KIRI: Upload + Input ---
-    col_upload, col_preview = st.columns([1, 2])
+    col_input, col_preview = st.columns([1, 2])
     
-    with col_upload:
-        st.subheader("📤 Input Gambar")
+    with col_input:
+        st.subheader("📤 Input Hub")
         
-        # TAB INPUT: Upload | Link | YouTube | Riset
-        tab_upload, tab_link, tab_youtube, tab_riset = st.tabs(["📁 Upload", "🔗 Link Gambar", "▶️ YouTube", "📚 Riset"])
+        # --- TAB INPUT ---
+        tab_upload, tab_paste, tab_url, tab_youtube, tab_riset = st.tabs([
+            "📁 Upload", "📋 Paste", "🔗 URL", "▶️ YouTube", "📚 Riset"
+        ])
         
-        # TAB 1: Upload Standar
+        # TAB 1: Upload
         with tab_upload:
-            uploaded_file = st.file_uploader("Pilih gambar", type=["jpg", "png", "jpeg"])
+            st.caption("Upload gambar atanapi drag & drop")
+            uploaded_file = st.file_uploader(
+                "Pilih gambar",
+                type=["jpg", "png", "jpeg"],
+                accept_multiple_files=False
+            )
             if uploaded_file is not None:
-                st.session_state.uploaded_image = Image.open(uploaded_file)
-                st.success("✅ Gambar siap!")
-                st.caption("Nama: " + uploaded_file.name)
-                
-                if st.button("🧹 Clear Image"):
-                    st.session_state.uploaded_image = None
-                    st.session_state.detection_result = {}
-                    st.session_state.gap_analysis = {}
+                img = Image.open(uploaded_file)
+                if set_image_source(img, "upload", uploaded_file.name):
+                    st.success(f"✅ Gambar siap: {uploaded_file.name}")
                     st.rerun()
-            
-            # Paste (Ctrl+V)
-            st.markdown("---")
-            st.caption("Atanapi paste langsung (Ctrl+V):")
-            pasted_img = paste_image_component()
-            if pasted_img is not None:
-                st.session_state.uploaded_image = pasted_img
-                st.success("✅ Gambar hasil paste!")
-                st.rerun()
         
-        # TAB 2: Link Gambar
-        with tab_link:
+        # TAB 2: Paste (streamlit-paste-button)
+        with tab_paste:
+            st.caption("📋 Klik tombol di handap, teras Ctrl+V (atawa Cmd+V) pikeun nempel gambar")
+            pasted = paste_image_button("📋 Klik di dieu, teras Ctrl+V")
+            if pasted is not None:
+                if set_image_source(pasted, "clipboard", "clipboard.png"):
+                    st.success("✅ Gambar hasil paste!")
+                    st.rerun()
+        
+        # TAB 3: URL
+        with tab_url:
             st.caption("Tempel link gambar (JPG, PNG, JPEG)")
             img_url = st.text_input("URL Gambar", placeholder="https://example.com/image.jpg")
             if st.button("📥 Download & Analisis", key="btn_img_url"):
@@ -235,33 +221,47 @@ elif menu == "📂 Project":
                     with st.spinner("Ngundeur gambar..."):
                         img = download_image_from_url(img_url)
                         if img:
-                            st.session_state.uploaded_image = img
-                            st.success("✅ Gambar hasil download!")
-                            st.rerun()
+                            filename = img_url.split("/")[-1] or "url_image.jpg"
+                            if set_image_source(img, "url", filename):
+                                st.success("✅ Gambar hasil download!")
+                                st.rerun()
                 else:
                     st.warning("Masukkan URL heula.")
         
-        # TAB 3: YouTube
+        # TAB 4: YouTube (dengan fallback thumbnail)
         with tab_youtube:
             st.caption("Tempel link YouTube pikeun inspirasi visual")
             yt_url = st.text_input("URL YouTube", placeholder="https://www.youtube.com/watch?v=...")
             if yt_url:
-                thumbnail, video_id = get_youtube_thumbnail(yt_url)
-                if thumbnail:
-                    st.image(thumbnail, caption=f"Thumbnail YouTube: {video_id}", use_column_width=True)
-                    st.caption(f"📹 Video ID: {video_id}")
-                    st.info("💡 Thumbnail tiasa dianggo salaku referensi visual.")
+                thumbnails, video_id = get_youtube_thumbnail(yt_url)
+                if thumbnails:
+                    # Coba masing-masing thumbnail
+                    thumbnail = None
+                    for url in thumbnails:
+                        try:
+                            response = requests.head(url, timeout=5)
+                            if response.status_code == 200:
+                                thumbnail = url
+                                break
+                        except:
+                            continue
                     
-                    if st.button("🎬 Gunakeun Thumbnail pikeun Analisis"):
-                        img = download_image_from_url(thumbnail)
-                        if img:
-                            st.session_state.uploaded_image = img
-                            st.success("✅ Thumbnail dijadikeun gambar analisis!")
-                            st.rerun()
+                    if thumbnail:
+                        st.image(thumbnail, caption=f"Thumbnail YouTube: {video_id}", use_column_width=True)
+                        st.caption(f"📹 Video ID: {video_id}")
+                        
+                        if st.button("🎬 Gunakeun Thumbnail pikeun Analisis"):
+                            img = download_image_from_url(thumbnail)
+                            if img:
+                                if set_image_source(img, "youtube", f"yt_{video_id}.jpg"):
+                                    st.success("✅ Thumbnail dijadikeun gambar analisis!")
+                                    st.rerun()
+                    else:
+                        st.warning("Teu tiasa mendakan thumbnail pikeun video ieu.")
                 else:
                     st.warning("Link YouTube teu valid.")
         
-        # TAB 4: Link Riset
+        # TAB 5: Riset
         with tab_riset:
             st.caption("Tempel link artikel / riset pikeun rujukan")
             research_url = st.text_input("URL Riset", placeholder="https://example.com/article")
@@ -278,7 +278,6 @@ elif menu == "📂 Project":
                 else:
                     st.warning("Isi URL atanapi catetan heula.")
             
-            # Tampilkeun daftar riset
             if st.session_state.research_links:
                 st.markdown("---")
                 st.subheader("📚 Daftar Riset Disimpen")
@@ -292,6 +291,20 @@ elif menu == "📂 Project":
                             st.session_state.research_links.pop(i)
                             st.rerun()
         
+        # --- INFO SUMBER GAMBAR ---
+        if st.session_state.image_source:
+            src = st.session_state.image_source
+            st.markdown("---")
+            st.success(f"🖼️ **Gambar aktif** dari: `{src.source}`")
+            st.caption(f"Nama: {src.filename} | Ukuran: {src.width}×{src.height}")
+            
+            if st.button("🧹 Clear Image"):
+                st.session_state.image_source = None
+                st.session_state.detection_result = {}
+                st.session_state.gap_analysis = {}
+                st.rerun()
+        
+        # --- REVISION HISTORY ---
         st.markdown("---")
         st.subheader("🔄 Revision History")
         if st.session_state.revisions:
@@ -302,17 +315,20 @@ elif menu == "📂 Project":
     
     with col_preview:
         st.subheader("🖼️ Preview")
-        if st.session_state.uploaded_image:
-            st.image(st.session_state.uploaded_image, use_column_width=True)
-            st.info(f"🔮 Current Channel: **{st.session_state.current_channel}**")
+        img = get_current_image()
+        if img:
+            st.image(img, use_column_width=True)
+            channel = st.session_state.current_channel
+            st.info(f"🔮 Current Channel: **{channel}**")
         else:
-            st.warning("📤 Upload, paste, atanapi masukkan link gambar heula!")
+            st.warning("📤 Upload, paste, URL, atanapi YouTube heula!")
 
 elif menu == "🔍 Detector":
     st.title("🔍 Detector & AI Creative Director")
     
-    if st.session_state.uploaded_image is None:
-        st.warning("📤 Punten upload gambar heula di menu Project.")
+    img = get_current_image()
+    if img is None:
+        st.warning("📤 Punten input gambar heula di menu Project.")
     else:
         if st.button("⚡ Analyze Image", type="primary"):
             with st.spinner("Analyzing Visual DNA & Gap Analysis..."):
@@ -526,10 +542,14 @@ elif menu == "📄 Report":
         st.subheader("📋 Project Report")
         
         gap = st.session_state.gap_analysis
-        if gap:
+        img_src = st.session_state.image_source
+        if gap and img_src:
             st.markdown(f"""
             **Project Name:** Bamboo Hush
             **Channel:** {gap.get('channel', '-')}
+            **Input Source:** {img_src.source}
+            **Filename:** {img_src.filename}
+            **Image Size:** {img_src.width}×{img_src.height}
             **Confidence:** {gap.get('confidence', 0)}%
             **Predicted Score:** {gap.get('predicted_score', 0)}%
             **Status:** PASS ({gap.get('predicted_score', 0)}%)
