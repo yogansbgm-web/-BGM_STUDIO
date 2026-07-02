@@ -85,7 +85,7 @@ def get_current_image():
 
 # --- Konfigurasi Halaman ---
 st.set_page_config(
-    page_title="VPD AI Creative Studio",
+    page_title="YOGANS BGM STUDIO AI Creative Studio",
     page_icon="🎨",
     layout="wide",
     initial_sidebar_state="expanded"
