@@ -1,0 +1,52 @@
+# VPD v7.1 - Knowledge Graph (FROZEN)
+# 19 Node Utama + Relations
+
+nodes:
+  - World
+  - Hero
+  - Architecture
+  - Mood
+  - Weather
+  - Camera
+  - Lens
+  - Lighting
+  - Material
+  - Texture
+  - Color
+  - FX
+  - Atmosphere
+  - Motion
+  - Composition
+  - Audio
+  - Props
+  - Story
+  - Negative
+
+relations:
+  - source: "JAZZ"
+    target: "Architecture"
+    value: "Speakeasy"
+  - source: "JAZZ"
+    target: "Lighting"
+    value: "Low-key"
+  - source: "JAZZ"
+    target: "FX"
+    value: "Rain"
+  - source: "FOREST"
+    target: "Lighting"
+    value: "Volumetric"
+  - source: "FOREST"
+    target: "FX"
+    value: "Fog"
+  - source: "BAMBU"
+    target: "Motion"
+    value: "Laminar"
+  - source: "BOSSA"
+    target: "Camera"
+    value: "24mm"
+  - source: "AURELIA"
+    target: "Material"
+    value: "Wood"
+  - source: "ECOLIFE"
+    target: "Lighting"
+    value: "Morning Sun"

@@ -1,0 +1,63 @@
+# VPD v7.1 - BGM STUDIO (FROZEN)
+# Integrated with MUSIC Prompt Tab
+# Tanggal: 2026-07-02
+
+JAZZ:
+  bgm_style: "Noir Jazz / Late Night Blues"
+  instruments: ["Upright Piano", "Double Bass", "Saxophone", "Brush Drums", "Trumpet"]
+  tempo: "Slow (60-70 BPM)"
+  mood_tags: ["Intimate", "Melancholic", "Smoky", "Warm"]
+  sfx_ambience: ["Rain on Window", "Distant Thunder", "Ice Clinking in Whiskey Glass", "Cigarette Smoke Hiss"]
+  voice_style: "Deep, raspy, whispering, spoken word"
+  prompt_suno: "Noir jazz piano, walking double bass, smoky saxophone solo, intimate warm atmosphere, soft rain ambience, 65 BPM, analog warm vinyl crackle"
+  key_music: "E♭ Minor / Blues Scale"
+
+BOSSA:
+  bgm_style: "Bossa Nova / Beach Lounge"
+  instruments: ["Nylon Acoustic Guitar", "Soft Percussion", "Cavaquinho", "Flute", "Light Piano"]
+  tempo: "Medium (90-110 BPM)"
+  mood_tags: ["Relaxed", "Sunny", "Productive", "Coastal"]
+  sfx_ambience: ["Ocean Waves", "Palm Sway", "Seagulls Distant", "Coffee Brewing"]
+  voice_style: "Soft, breathy, Portuguese-influenced, smooth"
+  prompt_suno: "Bossa nova acoustic guitar, gentle percussion, warm flute, relaxed coastal vibe, ocean wave background, 100 BPM, sun-drenched reverb"
+  key_music: "G Major / Bossa Nova Rhythm"
+
+BAMBU:
+  bgm_style: "Meditative Zen / Japanese Ambient"
+  instruments: ["Shakuhachi", "Koto", "Taiko (soft)", "Singing Bowls", "Bamboo Flute"]
+  tempo: "Very Slow (40-50 BPM)"
+  mood_tags: ["Calm", "Sacred", "Meditative", "Serene"]
+  sfx_ambience: ["Bamboo Water Fountain", "Wind Chimes", "Dew Drops", "Gentle Mist"]
+  voice_style: "Calm, monotone, chanting, whispering meditation"
+  prompt_suno: "Traditional shakuhachi flute, koto strings, meditative singing bowls, gentle bamboo fountain ambience, 45 BPM, zen garden reverb"
+  key_music: "D Minor / Pentatonic Scale"
+
+FOREST:
+  bgm_style: "Healing Ambient / Cinematic Nature"
+  instruments: ["Ambient Pads", "Cello", "Soft Piano", "Harmonica", "Wood Flute"]
+  tempo: "Slow (50-60 BPM)"
+  mood_tags: ["Healing", "Wild", "Immersive", "Earthy"]
+  sfx_ambience: ["Flowing River", "Birds Chirping", "Mossy Wind", "Fog Drift", "Light Rain"]
+  voice_style: "Ethereal, breathy, deep, nature-inspired narration"
+  prompt_suno: "Ambient cinematic pads, warm cello, soft piano arpeggios, healing forest nature sounds, flowing river ambience, 55 BPM, organic reverb"
+  key_music: "E♭ Major / Modal Harmony"
+
+AURELIA:
+  bgm_style: "Nostalgic Lo-fi / Vintage Vinyl"
+  instruments: ["Old Piano", "Acoustic Guitar", "Vinyl Crackle", "Soft Strings", "Clock Ticking"]
+  tempo: "Slow to Medium (70-80 BPM)"
+  mood_tags: ["Focused", "Nostalgic", "Cozy", "Warm"]
+  sfx_ambience: ["Pen on Paper", "Old Clock", "Dust Motes in Light", "Pages Turning"]
+  voice_style: "Warm, storytelling, soft, intimate whispering"
+  prompt_suno: "Vintage lo-fi piano, acoustic guitar, warm vinyl crackle, nostalgic cozy atmosphere, soft clock ticking, 75 BPM, warm tape saturation"
+  key_music: "A Major / Warm Analog"
+
+ECOLIFE:
+  bgm_style: "Mindful Acoustic / Organic Folk"
+  instruments: ["Acoustic Guitar", "Ukulele", "Soft Flute", "Light Cajon", "Rainstick"]
+  tempo: "Medium (80-90 BPM)"
+  mood_tags: ["Mindful", "Organic", "Calm", "Fresh"]
+  sfx_ambience: ["Morning Birds", "Water Dripping", "Steam Rise", "Leaves Rustling", "Coffee Pour"]
+  voice_style: "Clear, soothing, friendly, inspiring"
+  prompt_suno: "Organic acoustic guitar, gentle ukulele, soft flute melody, mindful morning atmosphere, fresh bird ambience, 85 BPM, natural open reverb"
+  key_music: "C Major / Folk Scale"

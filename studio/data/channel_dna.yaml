@@ -1,0 +1,74 @@
+# VPD v7.1 - 6 Channel DNA (FROZEN)
+# Tanggal: 2026-07-02
+
+JAZZ:
+  hero: ["Cat", "Piano", "Whiskey"]
+  mood: ["Warm", "Intimate", "Noir"]
+  palette: ["Amber", "Indigo", "Walnut"]
+  lighting: "Low-key"
+  camera: "85mm f/1.4"
+  era: "1920s"
+  architecture: "Speakeasy"
+  material: ["Weathered Walnut", "Vintage Brass", "Leather"]
+  fx: ["Rain", "Smoke", "Condensation"]
+  motion: ["Fire Flicker", "Smoke Drift"]
+
+BOSSA:
+  hero: ["Ocean", "Palm", "Coffee"]
+  mood: ["Relaxed", "Warm", "Productive"]
+  palette: ["Orange", "Turquoise", "Sand"]
+  lighting: "Golden Hour"
+  camera: "24mm f/5.6"
+  era: "1960s"
+  architecture: "Beach House"
+  material: ["Terracotta", "Wood", "Linen"]
+  fx: ["Sun Flare", "Gentle Breeze"]
+  motion: ["Palm Sway", "Wave Ripple"]
+
+BAMBU:
+  hero: ["Bamboo", "Mist", "Dew"]
+  mood: ["Calm", "Meditative", "Sacred"]
+  palette: ["Sage", "Grey", "Stone"]
+  lighting: "Overcast"
+  camera: "50mm f/2.8"
+  era: "Ancient"
+  architecture: "Japanese Teahouse"
+  material: ["Bamboo", "Rice Paper", "Stone"]
+  fx: ["Mist", "Dew Drops", "Steam"]
+  motion: ["Laminar Water", "Leaf Sway"]
+
+FOREST:
+  hero: ["River", "Moss", "Fog"]
+  mood: ["Healing", "Wild", "Immersive"]
+  palette: ["Emerald", "Blue-Grey", "Bark"]
+  lighting: "Volumetric"
+  camera: "24mm f/4"
+  era: "Prehistoric"
+  architecture: "Cabin"
+  material: ["Moss", "River Stone", "Pine"]
+  fx: ["Fog", "Rain", "Volumetric Light"]
+  motion: ["Rapids", "Fog Drift"]
+
+AURELIA:
+  hero: ["HandWriting", "Vinyl", "Desk"]
+  mood: ["Focused", "Nostalgic", "Cozy"]
+  palette: ["Warm Amber", "Cool Blue"]
+  lighting: "Soft"
+  camera: "50mm f/1.8"
+  era: "1970s"
+  architecture: "Study Room"
+  material: ["Wood", "Paper", "Leather"]
+  fx: ["Dust Motes", "Warm Glow"]
+  motion: ["Pen Stroke", "Record Spin"]
+
+ECOLIFE:
+  hero: ["Monstera", "Mug", "Book"]
+  mood: ["Calm", "Mindful", "Organic"]
+  palette: ["Green", "Terracotta", "Cream"]
+  lighting: "Morning Sun"
+  camera: "50mm f/2.8 Macro"
+  era: "Modern"
+  architecture: "Greenhouse"
+  material: ["Ceramic", "Cotton", "Clay"]
+  fx: ["Sun Rays", "Dew"]
+  motion: ["Leaf Unfurl", "Steam Rise"]
