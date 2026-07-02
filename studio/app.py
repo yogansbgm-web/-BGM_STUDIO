@@ -1,13 +1,13 @@
 # YOGANS BGM STUDIO v7.1 - AI Creative Studio (FINAL)
 # Streamlit UI - Adobe Lightroom + VSCode Style
-# Full refactor with modular architecture
+# Full refactor with modular architecture + VPOS Selector + Prompt Formula
 
 import streamlit as st
 import yaml
 import datetime
 from pathlib import Path
 
-# --- Import from our modules (absolute imports) ---
+# --- Import from our modules ---
 from config.constants import CHANNEL_NAMES, SUPPORTED_IMAGE_TYPES, DATA_DIR
 from models import ImageSource, ProjectState
 from models.detector_result import DetectorResult, GapResult, CreativePlan
@@ -15,12 +15,18 @@ from engine.input_normalizer import normalize_to_pil, NormalizationError
 from engine.detector import get_detector
 from engine.gap_analyzer import GapAnalyzer
 from engine.creative_director import CreativeDirector
-from engine.prompt_compiler import MidjourneyAdapter
+from engine.prompt_compiler import build_partial_prompt_vocabulary
+from engine.agnes import agnes_respond, agnes_suggest
+from engine.vpos_selector import TIME_MAP, MOOD_MAP, STYLE_MAP, get_vpos_filters, filter_vpos_by_user, get_user_mode
+from engine.vpos_reference import get_reference
+from engine.prompt_formula import compile_all_formulas
+from engine.vpos_mapper import map_vpos_to_dna, get_channel_match
 from services.download import download_image_from_url, get_youtube_thumbnail
 from services.export import generate_export_package
 from utils.exceptions import VPDError
 from utils.logger import logger
 from streamlit_paste_button import paste_image_button
+import streamlit.components.v1 as components
 
 # ---- Page config ----
 st.set_page_config(
@@ -52,20 +58,46 @@ def load_bgm():
     except FileNotFoundError:
         return {}
 
+@st.cache_data(ttl=300)
+def load_vpos():
+    try:
+        return {
+            "worlds": yaml.safe_load(DATA_DIR / "vpos_world.yaml"),
+            "heroes": yaml.safe_load(DATA_DIR / "vpos_hero.yaml"),
+            "lightings": yaml.safe_load(DATA_DIR / "vpos_lighting.yaml"),
+            "materials": yaml.safe_load(DATA_DIR / "vpos_material.yaml"),
+        }
+    except FileNotFoundError:
+        return {"worlds": [], "heroes": [], "lightings": [], "materials": []}
+
 DNA = load_dna()
 KNOWLEDGE = load_knowledge()
 BGM = load_bgm()
+VPOS = load_vpos()
 CHANNEL_LIST = list(DNA.keys())
 
-# ---- Session State (single ProjectState) ----
+# ---- Session State ----
 if 'project' not in st.session_state:
     st.session_state.project = ProjectState()
+if 'agnes_chat_history' not in st.session_state:
+    st.session_state.agnes_chat_history = []
+if 'vpos_filters' not in st.session_state:
+    st.session_state.vpos_filters = {}
+if 'vpos_filtered' not in st.session_state:
+    st.session_state.vpos_filtered = {}
+if 'vpos_applied' not in st.session_state:
+    st.session_state.vpos_applied = False
+if 'selected_time' not in st.session_state:
+    st.session_state.selected_time = "🌙 Malam"
+if 'selected_mood' not in st.session_state:
+    st.session_state.selected_mood = "📚 Riset"
+if 'selected_style' not in st.session_state:
+    st.session_state.selected_style = "📸 Standard 50mm"
 
 project = st.session_state.project
 
 # ---- Helper functions ----
 def set_image_source(raw_input, source: str, filename: str = "untitled.png") -> bool:
-    """Unified setter using the normalizer."""
     if raw_input is None:
         return False
     try:
@@ -73,11 +105,7 @@ def set_image_source(raw_input, source: str, filename: str = "untitled.png") -> 
     except NormalizationError as e:
         st.error(f"❌ Gagal ngolah gambar: {e}")
         return False
-    project.image_source = ImageSource(
-        image=pil_img,
-        source=source,
-        filename=filename
-    )
+    project.image_source = ImageSource(image=pil_img, source=source, filename=filename)
     project.clear_analysis()
     return True
 
@@ -86,26 +114,53 @@ def get_current_image():
 
 # ---- Sidebar ----
 with st.sidebar:
-    st.image("https://placehold.co/200x60/1a1a1a/FFB800?text=YOGANS+BGM+STUDIO", use_column_width=True)
+    st.image("https://placehold.co/200x60/1a1a1a/FFB800?text=YOGANS+BGM+STUDIO", use_container_width=True)
+    st.markdown("---")
+    
+    # ---- Channel Selector ----
+    selected_channel = st.selectbox(
+        "🎯 Channel",
+        CHANNEL_LIST,
+        index=CHANNEL_LIST.index(project.channel) if project.channel in CHANNEL_LIST else 0
+    )
+    if selected_channel != project.channel:
+        project.channel = selected_channel
+        st.rerun()
+    
+    # ---- Agnes AI Assistant ----
+    with st.expander("🤖 Agnes AI Assistant", expanded=False):
+        agnes_input = st.text_input(
+            "Tanya Agnes...",
+            placeholder="saran, workflow, prompt...",
+            key="agnes_sidebar"
+        )
+        if st.button("💬 Tanya", use_container_width=True):
+            if agnes_input.strip():
+                response = agnes_respond(agnes_input, project)
+                st.session_state.agnes_chat_history.append({"user": agnes_input, "agnes": response})
+                st.rerun()
+        if st.session_state.agnes_chat_history:
+            for chat in st.session_state.agnes_chat_history[-3:]:
+                st.caption(f"🧑‍💻 {chat['user']}")
+                st.info(f"🤖 {chat['agnes']}")
+    
     st.markdown("---")
     menu = st.radio(
         "Navigasi",
-        ["🏠 Home", "📂 Project", "🔍 Detector", "🧬 Visual DNA", "✍️ Prompt", "📄 Report", "🧠 Knowledge", "📦 Export"],
+        ["🏠 Home", "📂 Project", "🔍 Analyze", "🧬 DNA", "✍️ Prompt", "📊 Report"],
         index=0
     )
-    st.markdown("---")
-    st.caption(f"🔒 FROZEN v7.1 | {datetime.date.today()}")
-
-st.markdown("---")
+    st.caption(f"🔒 v7.1 | {datetime.date.today()}")
 
 # ---- MAIN AREA ----
 if menu == "🏠 Home":
-    st.title("🎨 YOGANS BGM STUDIO AI Creative Studio")
-    st.caption("Visual Production Database — FROZEN v7.1")
+    st.title("🎨 YOGANS BGM STUDIO")
+    st.caption("AI Creative Studio — Visual Production Database")
     col1, col2, col3 = st.columns(3)
-    col1.metric("Total Projects", "12", "+3")
-    col2.metric("PASS Rate", "91%", "▲ 5%")
-    col3.metric("Knowledge Nodes", "19", "Stabil")
+    col1.metric("📁 Projects", "12", "+3")
+    col2.metric("✅ PASS Rate", "91%", "▲ 5%")
+    col3.metric("🧠 Knowledge", "19", "Stabil")
+    st.markdown("---")
     st.subheader("📂 Recent Projects")
     for p in [{"name":"Bamboo Hush","score":94,"status":"PASS"}, {"name":"Night Jazz","score":91,"status":"PASS"}, {"name":"Bossa Session","score":78,"status":"WARN"}]:
         a,b,c = st.columns([3,1,1])
@@ -115,26 +170,22 @@ if menu == "🏠 Home":
 
 elif menu == "📂 Project":
     st.title("📂 Project Workspace")
-    st.caption("INPUT HUB — Unified input pipeline")
+    st.caption("INPUT HUB — Upload, Paste, URL, YouTube")
     col_input, col_preview = st.columns([1, 2])
-
+    
     with col_input:
-        st.subheader("📤 Input Hub")
-        tab_upload, tab_paste, tab_url, tab_youtube, tab_riset = st.tabs(
-            ["📁 Upload", "📋 Paste", "🔗 URL", "▶️ YouTube", "📚 Riset"]
-        )
-
+        st.subheader("📤 Input")
+        tab_upload, tab_paste, tab_url, tab_youtube = st.tabs(["📁 Upload", "📋 Paste", "🔗 URL", "▶️ YouTube"])
+        
         with tab_upload:
             uploaded = st.file_uploader("Pilih gambar", type=SUPPORTED_IMAGE_TYPES)
             if uploaded:
                 if set_image_source(uploaded, "upload", uploaded.name):
-                    st.success(f"✅ Gambar siap: {uploaded.name}")
+                    st.success(f"✅ {uploaded.name}")
                     st.rerun()
-
-                with tab_paste:
+        
+        with tab_paste:
             st.caption("📋 **Pilihan 1:** Klik tombol di handap, teras **Ctrl+V** (atawa Cmd+V)")
-            
-            # Tombol Paste (Ctrl+V) — tetep aya
             pasted = paste_image_button("📋 Klik di dieu, teras Ctrl+V")
             if pasted is not None:
                 if set_image_source(pasted, "clipboard", "clipboard.png"):
@@ -142,26 +193,17 @@ elif menu == "📂 Project":
                     st.rerun()
             
             st.markdown("---")
+            st.caption("🖱️ **Pilihan 2:** Klik kotak di handap, teras **Ctrl+V** atanapi **klik kanan → Paste**")
             
-            st.caption("🖱️ **Pilihan 2:** Klik kotak di handap, teras **klik kanan → Paste**")
-            st.caption("(Atanapi anjeun tiasa langsung **Ctrl+V** dina kotak ieu ogé)")
-            
-            # Text area pikeun nangkep paste (inklusi klik kanan)
-            paste_text_area = st.text_area(
+            paste_text = st.text_area(
                 label="",
-                placeholder="Klik di dieu, teras klik kanan → Paste (atanapi Ctrl+V)",
+                placeholder="Klik di dieu, teras Ctrl+V atanapi klik kanan → Paste",
                 height=80,
                 key="paste_area",
                 label_visibility="collapsed"
             )
             
-            # Cek lamun aya gambar anu di-paste ka text area
-            # (Kami henteu tiasa langsung nangkep gambar tina text_area,
-            # tapi kami tiasa nambihan JavaScript pikeun nangkep event paste)
-            
-            # Tambahkeun JavaScript pikeun nangkep paste tina text_area
-            import streamlit.components.v1 as components
-            paste_js = """
+            components.html("""
             <script>
             (function() {
                 const textArea = document.querySelector('textarea[data-testid="stTextArea"]');
@@ -176,17 +218,18 @@ elif menu == "📂 Project":
                             const reader = new FileReader();
                             reader.onload = function(event) {
                                 const dataUrl = event.target.result;
-                                // Kirim ka Streamlit via input hidden
                                 const input = document.createElement('input');
                                 input.type = 'hidden';
                                 input.id = 'pasted_image_data';
                                 input.value = dataUrl;
                                 document.body.appendChild(input);
                                 
-                                // Pencet tombol submit otomatis
-                                const btn = document.querySelector('button[data-testid="baseButton-secondary"]');
-                                if (btn) {
-                                    btn.click();
+                                const btns = document.querySelectorAll('button');
+                                for (let btn of btns) {
+                                    if (btn.innerText.includes('Proses Gambar dari Paste')) {
+                                        btn.click();
+                                        break;
+                                    }
                                 }
                             };
                             reader.readAsDataURL(blob);
@@ -196,119 +239,108 @@ elif menu == "📂 Project":
                 });
             })();
             </script>
-            """
-            components.html(paste_js, height=0)
+            """, height=0)
             
-            # Tombol pikeun ngolah gambar hasil paste
             if st.button("📥 Proses Gambar dari Paste", key="btn_process_paste", type="secondary"):
-                # Cek lamun aya data gambar disimpen
-                # (Ieu bakal di-trigger ku JavaScript otomatis)
-                st.info("Gambar bakal diprosés otomatis saatos paste.")
-
+                st.info("📸 Gambar bakal diprosés otomatis saatos paste.")
+                st.warning("⚠️ Kanggo ayeuna, paste Ctrl+V (Pilihan 1) langkung stabil.")
+        
         with tab_url:
-            img_url = st.text_input("🔗 URL Gambar", placeholder="https://example.com/image.jpg")
-            if st.button("📥 Download & Analisis"):
+            img_url = st.text_input("", placeholder="https://example.com/image.jpg", label_visibility="collapsed")
+            if st.button("📥 Download", use_container_width=True):
                 if img_url:
-                    with st.spinner("Ngundeur gambar..."):
+                    with st.spinner("..."):
                         img = download_image_from_url(img_url)
                         if img and set_image_source(img, "url", img_url.split("/")[-1]):
-                            st.success("✅ Gambar hasil download!")
+                            st.success("✅ Downloaded!")
                             st.rerun()
-                else:
-                    st.warning("Masukkan URL heula.")
-
+        
         with tab_youtube:
-            yt_url = st.text_input("▶️ URL YouTube", placeholder="https://www.youtube.com/watch?v=...")
+            yt_url = st.text_input("", placeholder="youtube.com/watch?v=...", label_visibility="collapsed")
             if yt_url:
                 thumb_url, vid = get_youtube_thumbnail(yt_url)
                 if thumb_url:
-                    st.image(thumb_url, caption=f"Thumbnail: {vid}", use_column_width=True)
-                    if st.button("🎬 Gunakeun Thumbnail"):
+                    st.image(thumb_url, use_container_width=True)
+                    if st.button("🎬 Use Thumbnail", use_container_width=True):
                         img = download_image_from_url(thumb_url)
                         if img and set_image_source(img, "youtube", f"yt_{vid}.jpg"):
-                            st.success("✅ Thumbnail dipaké!")
+                            st.success("✅ Thumbnail set!")
                             st.rerun()
-                else:
-                    st.warning("Teu bisa ménta thumbnail.")
-
-        with tab_riset:
-            research_url = st.text_input("🔗 URL Riset", placeholder="https://example.com/article")
-            research_note = st.text_area("📝 Catatan", placeholder="Tulis catetan...")
-            if st.button("💾 Simpan Riset"):
-                if research_url or research_note:
-                    project.research_links.append({
-                        "url": research_url,
-                        "note": research_note,
-                        "date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-                    })
-                    st.success("✅ Disimpen!")
-            if project.research_links:
-                st.markdown("---")
-                st.subheader("📚 Daftar Riset")
-                for i, item in enumerate(project.research_links):
-                    with st.expander(f"📄 {item['date']}"):
-                        st.markdown(f"**URL:** {item['url']}")
-                        st.markdown(f"**Catatan:** {item['note']}")
-                        if st.button(f"🗑️ Hapus {i+1}", key=f"del_{i}"):
-                            project.research_links.pop(i)
-                            st.rerun()
-
-        # ---- Image info ----
+        
         if project.image_source:
             src = project.image_source
             st.markdown("---")
-            st.success(f"🖼️ **Aktif:** `{src.source}` — {src.filename} ({src.width}×{src.height})")
-            if st.button("🧹 Clear Image"):
+            st.success(f"🖼️ {src.filename} ({src.width}×{src.height})")
+            if st.button("🧹 Clear", use_container_width=True):
                 project.clear_all()
                 st.rerun()
-
-        # ---- Revision history ----
-        st.markdown("---")
-        st.subheader("🔄 Revision History")
-        if project.revisions:
-            for rev in project.revisions:
-                st.text(f"v{rev['id']}: {rev['score']}% - {rev['status']}")
-        else:
-            st.caption("Belum aya revisi.")
-
+    
     with col_preview:
         st.subheader("🖼️ Preview")
         img = get_current_image()
         if img:
-            st.image(img, use_column_width=True)
-            st.info(f"🔮 Channel: **{project.channel}**")
+            st.image(img, use_container_width=True)
+            st.caption(f"🔮 {project.channel}")
         else:
-            st.warning("📤 Upload, paste, URL, atanapi YouTube heula!")
+            st.info("📤 Upload, paste, atau masukkan URL")
 
-elif menu == "🔍 Detector":
-    st.title("🔍 Detector & AI Creative Director")
+elif menu == "🔍 Analyze":
+    st.title("🔍 Analyze & AI Creative Director")
+    
+    # ---- VPOS Selector ----
+    with st.expander("🎯 VPOS Selector — Pilih Waktu, Suasana, Style", expanded=True):
+        col_a, col_b, col_c = st.columns(3)
+        with col_a:
+            st.session_state.selected_time = st.selectbox("🌅 Waktu", list(TIME_MAP.keys()), index=list(TIME_MAP.keys()).index(st.session_state.selected_time))
+        with col_b:
+            st.session_state.selected_mood = st.selectbox("🎭 Suasana", list(MOOD_MAP.keys()), index=list(MOOD_MAP.keys()).index(st.session_state.selected_mood))
+        with col_c:
+            st.session_state.selected_style = st.selectbox("📸 Style", list(STYLE_MAP.keys()), index=list(STYLE_MAP.keys()).index(st.session_state.selected_style))
+        
+        mood_mode = get_user_mode(st.session_state.selected_mood)
+        if mood_mode == "reference":
+            st.info("📚 **Mode: Riset** — Tampilkeun inspirasi channel lain")
+            references = get_reference(st.session_state.selected_mood)
+            if references:
+                for ref in references:
+                    st.caption(f"🎬 **{ref['name']}** ({ref['subs']}) — {ref['style']}")
+        else:
+            if st.button("🚀 Apply VPOS Filters", type="primary"):
+                filters = get_vpos_filters(st.session_state.selected_time, st.session_state.selected_mood, st.session_state.selected_style)
+                st.session_state.vpos_filters = filters
+                st.session_state.vpos_filtered = filter_vpos_by_user(VPOS, filters)
+                st.session_state.vpos_applied = True
+                st.success(f"✅ Filters applied: {filters}")
+                st.rerun()
+    
     img = get_current_image()
     if img is None:
         st.warning("📤 Input gambar heula di Project.")
     else:
-        if st.button("⚡ Analyze Image", type="primary"):
+        if st.button("⚡ Analyze Image", type="primary", use_container_width=True):
             with st.spinner("Analyzing..."):
                 try:
                     detector = get_detector()
                     det_result = detector.detect(img)
                     project.detector_result = det_result.to_dict()
-
+                    
                     gap_analyzer = GapAnalyzer()
                     dna_channel = DNA.get(project.channel, {})
                     gap_result = gap_analyzer.analyze(det_result, dna_channel)
                     project.gap_result = gap_result.to_dict()
-
+                    
                     director = CreativeDirector()
                     creative_plan = director.generate(gap_result, dna_channel)
                     project.creative_result = creative_plan.to_dict()
                     project.final_prompt = creative_plan.final_prompt
-
+                    
                     st.success("✅ Analysis Complete!")
+                    agnes_suggestion = agnes_suggest(project)
+                    with st.expander("🤖 Agnes Saran"):
+                        st.info(agnes_suggestion)
                 except VPDError as e:
-                    st.error(f"❌ Analysis failed: {e}")
-                    logger.error(f"Detector error: {e}")
-
-        # Display results
+                    st.error(f"❌ {e}")
+        
         if project.detector_result:
             res = project.detector_result
             col1, col2 = st.columns(2)
@@ -342,11 +374,39 @@ elif menu == "🔍 Detector":
                     if st.button("📋 Terapkan ke Prompt"):
                         st.success("Prompt siap di tab ✍️ Prompt")
 
-elif menu == "🧬 Visual DNA":
+elif menu == "🧬 DNA":
     st.title("🧬 Visual DNA Card")
+    
+    # --- Prompt Asli (Gemini) ---
+    if project.gap_result and project.gap_result.get('raw'):
+        raw = project.gap_result['raw']
+        raw_prompt = raw.get('raw_prompt', '')
+        description = raw.get('description', '')
+        suggestion = raw.get('suggestion', '')
+        if raw_prompt:
+            st.subheader("🖼️ Prompt Asli (Hasil Deteksi)")
+            st.code(raw_prompt, language="text")
+            col_a, col_b = st.columns(2)
+            with col_a:
+                st.markdown("**📖 Deskripsi:**")
+                st.info(description if description else "—")
+            with col_b:
+                st.markdown("**💡 Saran:**")
+                st.success(suggestion if suggestion else "—")
+            st.markdown("---")
+    
+    # --- DNA Channel ---
     selected = st.selectbox("Pilih Channel", CHANNEL_LIST, index=CHANNEL_LIST.index(project.channel))
-    project.channel = selected
+    if selected != project.channel:
+        project.channel = selected
+        st.rerun()
     dna = DNA[selected]
+    
+    st.subheader("📝 Prompt Awal (DNA Default)")
+    initial_prompt = f"A cinematic {dna.get('architecture', '')} with {', '.join(dna.get('hero', [])[:2])}, {dna.get('mood', [''])[0]} atmosphere, {dna.get('lighting', '')} lighting, {', '.join(dna.get('palette', [])[:2])} palette"
+    st.code(initial_prompt, language="text")
+    st.markdown("---")
+    
     col1, col2 = st.columns(2)
     with col1:
         st.metric("World", selected)
@@ -360,33 +420,88 @@ elif menu == "🧬 Visual DNA":
         st.subheader("Palette"); st.write(", ".join(dna.get("palette", [])))
         st.subheader("Material"); st.write(", ".join(dna.get("material", [])))
         st.subheader("FX"); st.write(", ".join(dna.get("fx", [])))
+    
+    # --- VPOS Filtered Results ---
+    if st.session_state.vpos_applied and st.session_state.vpos_filtered:
+        st.markdown("---")
+        st.subheader("🎯 VPOS Filtered Results")
+        for category, items in st.session_state.vpos_filtered.items():
+            if items:
+                st.markdown(f"**{category.upper()}**")
+                for item in items[:3]:
+                    name = item.get('name') or item.get('role') or item.get('style') or '-'
+                    st.caption(f"• {name}")
+    
+    # --- Prompt Final ---
+    if project.final_prompt:
+        st.markdown("---")
+        st.subheader("🎯 Prompt Final")
+        st.code(project.final_prompt, language="text")
 
 elif menu == "✍️ Prompt":
     st.title("✍️ Prompt Compiler")
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["🖼️ IMAGE", "🎥 VIDEO", "🎵 MUSIC", "🚫 NEGATIVE", "🧩 PARTIAL"])
+    
+    # --- Agnes Asisten ---
+    with st.expander("🤖 Agnes — Asisten Prompt", expanded=False):
+        agnes_prompt = st.text_input("Tanya Agnes...", placeholder="kumaha ngahususkeun prompt?", key="agnes_prompt")
+        if agnes_prompt:
+            response = agnes_respond(agnes_prompt, project)
+            st.info(f"🤖 {response}")
+    
     channel = project.channel
     dna = DNA[channel]
     bgm = BGM.get(channel, {})
-
-    with tab1:
-        st.subheader("Midjourney Prompt")
-        if project.final_prompt:
-            prompt = project.final_prompt + " --ar 16:9 --style raw --s 50 --v 6.1"
-            st.info("📌 Prompt Final ti Creative Director")
-        else:
-            prompt = f"A cinematic {dna.get('architecture', '')} with {', '.join(dna.get('hero', [])[:2])}, {dna.get('mood', [''])[0]} atmosphere, {dna.get('lighting', '')} lighting --ar 16:9 --style raw --s 50 --v 6.1"
-        st.code(prompt, language="text")
-        st.download_button("📋 Copy Image Prompt", prompt, file_name="prompt_image.txt")
-        if st.button("🔄 Reset ka DNA Default"):
-            project.final_prompt = ""
-            st.rerun()
-
-    with tab2:
-        video_prompt = f"cinematic shot, {dna.get('architecture', '')}, {', '.join(dna.get('hero', []))}, 4s loop 24fps"
-        st.code(video_prompt, language="text")
-
-    with tab3:
-        st.subheader("🎵 BGM Studio")
+    
+    # --- 4 Formula Prompt ---
+    st.subheader("🎯 Prompt Formulas")
+    
+    # Build data for formulas
+    formula_data = {
+        "subject": ", ".join(dna.get("hero", ["artist"])),
+        "setting": dna.get("architecture", "room"),
+        "action": dna.get("motion", ["performing"])[0] if dna.get("motion") else "performing",
+        "style": dna.get("mood", ["cinematic"])[0],
+        "lighting": dna.get("lighting", "natural"),
+        "palette": ", ".join(dna.get("palette", ["neutral"])),
+        "foreground": ", ".join(dna.get("fx", ["details"])),
+        "background": dna.get("atmosphere", "ambient"),
+        "cinematography": "cinematic shot",
+        "movement": dna.get("motion", ["gentle movement"])[0] if dna.get("motion") else "gentle movement",
+        "camera": "50mm f/1.8, 24fps",
+        "ratio": "16:9",
+        "stylize": 50,
+        "chaos": 10,
+        "weird": 5
+    }
+    
+    formulas = compile_all_formulas(dna, project.detector_result or {}, st.session_state.vpos_filters, formula_data)
+    
+    tab_g, tab_l, tab_m, tab_d = st.tabs(["Google", "Luma", "Midjourney", "DeepSeek"])
+    
+    with tab_g:
+        st.caption("Formula: [Cinematography] + [Subject] + [Action] + [Setting] + [Style]")
+        st.code(formulas.get("google", ""), language="text")
+        st.download_button("📋 Copy", formulas.get("google", ""), file_name="prompt_google.txt")
+    
+    with tab_l:
+        st.caption("Formula: [Subject] + [Setting] + [Movement] + [Camera]")
+        st.code(formulas.get("luma", ""), language="text")
+        st.download_button("📋 Copy", formulas.get("luma", ""), file_name="prompt_luma.txt")
+    
+    with tab_m:
+        st.caption("Formula: [Subject] + [Style] + [Lighting] + Parameters")
+        st.code(formulas.get("midjourney", ""), language="text")
+        st.download_button("📋 Copy", formulas.get("midjourney", ""), file_name="prompt_midjourney.txt")
+    
+    with tab_d:
+        st.caption("Formula: [Subject] + [Foreground] + [Background] + [Palette]")
+        st.code(formulas.get("deepseek", ""), language="text")
+        st.download_button("📋 Copy", formulas.get("deepseek", ""), file_name="prompt_deepseek.txt")
+    
+    st.markdown("---")
+    
+    # --- BGM Studio ---
+    with st.expander("🎵 BGM Studio", expanded=False):
         if bgm:
             st.markdown(f"**Style:** {bgm.get('bgm_style', '-')}")
             st.markdown(f"**Instruments:** {', '.join(bgm.get('instruments', []))}")
@@ -394,31 +509,17 @@ elif menu == "✍️ Prompt":
             st.code(bgm.get('prompt_suno', ''), language="text")
         else:
             st.warning("BGM data teu aya.")
+    
+    # --- Partial Prompt ---
+    st.subheader("🧩 Partial Prompt (Vocabulary)")
+    partial = build_partial_prompt_vocabulary(dna, project.gap_result or {})
+    st.code(partial, language="text")
+    st.download_button("📋 Copy Partial", partial, file_name="partial_prompt.txt")
 
-    with tab4:
-        st.code("low quality, blurry, distorted, plastic, fake, ugly", language="text")
-
-       with tab5:
-        st.subheader("🧩 Partial Prompt (SDXL Positive / Vocabulary)")
-        st.caption("Kosakata deskriptif — siap dipaké dina SDXL, ComfyUI, atanapi Midjourney Partial")
-        
-        from engine.prompt_compiler import build_partial_prompt_vocabulary
-        
-        # Bangun vocabulary
-        partial = build_partial_prompt_vocabulary(
-            dna=dna,
-            gap_result=project.gap_result or {}
-        )
-        
-        st.code(partial, language="text")
-        st.download_button(
-            "📋 Copy Partial Prompt",
-            partial,
-            file_name="partial_prompt.txt"
-        )
-elif menu == "📄 Report":
-    st.title("📄 Report Generator")
+elif menu == "📊 Report":
+    st.title("📊 Report Generator")
     tab_r1, tab_r2, tab_r3 = st.tabs(["📋 Project Report", "📈 Weekly Report", "⭐ Final Report"])
+    
     with tab_r1:
         st.subheader("📋 Project Report")
         if project.image_source and project.detector_result:
@@ -428,12 +529,16 @@ elif menu == "📄 Report":
             **Confidence:** {project.detector_result.get('confidence', 0)}%
             **Prompt:** {project.final_prompt or 'Belum aya'}
             """)
+            if st.button("Export PDF"):
+                st.info("Fungsi PDF bakal aktip saatos ReportLab diintegrasikeun.")
         else:
             st.info("Jalanan Detector heula.")
+    
     with tab_r2:
         st.metric("Projects This Week", "5")
         st.metric("Average Score", "89%")
         st.bar_chart({"Jazz": 3, "Bossa": 2, "Forest": 1})
+    
     with tab_r3:
         st.success("⭐ Final Knowledge Report")
         if project.gap_result:
@@ -441,33 +546,6 @@ elif menu == "📄 Report":
         else:
             st.info("Belum aya data.")
 
-elif menu == "🧠 Knowledge":
-    st.title("🧠 Master Knowledge Database")
-    st.subheader("📊 Statistik per Channel")
-    cols = st.columns(3)
-    for i, name in enumerate(CHANNEL_LIST):
-        with cols[i % 3]:
-            st.metric(name, f"Project: {i*10+5}", f"PASS: {i*8+3}")
-    st.subheader("📈 Knowledge Growth")
-    st.line_chart({"Week 1": 152, "Week 2": 181, "Week 3": 229, "Week 4": 284})
-    with st.expander("🌳 Knowledge Graph (YAML)"):
-        st.json(KNOWLEDGE)
-
-elif menu == "📦 Export":
-    st.title("📦 Export Project")
-    st.caption("Ekspor sadaya data project.")
-    if st.button("📥 Generate & Download ZIP", type="primary"):
-        try:
-            zip_data = generate_export_package(project)
-            st.download_button(
-                "⬇️ Download",
-                zip_data,
-                file_name=f"export_{project.channel}_{datetime.date.today()}.zip",
-                mime="application/zip"
-            )
-        except Exception as e:
-            st.error(f"Export gagal: {e}")
-
 # ---- Footer ----
 st.sidebar.markdown("---")
-st.sidebar.caption("🎨 YOGANS BGM STUDIO v7.1 | Made with Streamlit")
+st.sidebar.caption("🎨 YOGANS BGM STUDIO v7.1")

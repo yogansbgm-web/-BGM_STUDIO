@@ -1,4 +1,5 @@
 # engine/input_normalizer.py
+from streamlit_paste_button import PasteResult
 from PIL import Image, ImageOps
 import io
 import base64
@@ -84,6 +85,24 @@ def _normalize_dict(obj: Any) -> Optional[Image.Image]:
     return None
 
 @register_normalizer
+def _normalize_paste_result(obj: Any) -> Optional[Image.Image]:
+    """Special handler for streamlit_paste_button.PasteResult."""
+    if obj.__class__.__name__ == "PasteResult":
+        for attr in ['image', 'data', 'bytes', 'content', 'value']:
+            if hasattr(obj, attr):
+                try:
+                    val = getattr(obj, attr)
+                    if val is not None:
+                        return normalize_to_pil(val)
+                except Exception:
+                    continue
+        if hasattr(obj, '__dict__'):
+            for val in obj.__dict__.values():
+                try:
+                    return normalize_to_pil(val)
+                except Exception:
+                    continue
+    return None
 def _normalize_paste_result(obj: Any) -> Optional[Image.Image]:
     """Special handler for streamlit_paste_button.PasteResult."""
     # Check class name (because type(obj) might not be directly imported)

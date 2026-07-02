@@ -1,0 +1,32 @@
+# data/vpos_hero.yaml
+heroes:
+  - id: H001
+    role: "Jazz Pianist"
+    gender: "Male"
+    emotion: "Focused"
+    outfit: "Elegant"
+    motion: "Finger Motion"
+  - id: H002
+    role: "Monk"
+    gender: "Male"
+    emotion: "Calm"
+    outfit: "Simple Robe"
+    motion: "Breathing"
+  - id: H003
+    role: "Detective"
+    gender: "Male"
+    emotion: "Serious"
+    outfit: "Trench Coat"
+    motion: "Smoke Gesture"
+  - id: H004
+    role: "Singer"
+    gender: "Female"
+    emotion: "Emotional"
+    outfit: "Dress"
+    motion: "Micro sway"
+  - id: H005
+    role: "Bartender"
+    gender: "Male"
+    emotion: "Neutral"
+    outfit: "Apron"
+    motion: "Mixing motion"

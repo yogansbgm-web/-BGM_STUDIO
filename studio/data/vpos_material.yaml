@@ -1,0 +1,32 @@
+# data/vpos_material.yaml
+materials:
+  - id: M001
+    name: "Old Oak"
+    reflectivity: 0.2
+    roughness: 80
+    condition: "Dry"
+    style: "Wood Grain"
+  - id: M002
+    name: "Marble"
+    reflectivity: 0.9
+    roughness: 10
+    condition: "Cold"
+    style: "Luxury Surface"
+  - id: M003
+    name: "Copper"
+    reflectivity: 0.6
+    roughness: 40
+    condition: "Aged"
+    style: "Patina Metal"
+  - id: M004
+    name: "Leather"
+    reflectivity: 0.3
+    roughness: 70
+    condition: "Soft"
+    style: "Vintage"
+  - id: M005
+    name: "Concrete"
+    reflectivity: 0.1
+    roughness: 90
+    condition: "Rough"
+    style: "Industrial"

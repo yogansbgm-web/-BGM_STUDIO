@@ -1,9 +1,11 @@
 import os
-from pathlib import Path
+# --- API Keys (Opsional) ---
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 
+from pathlib import Path
 BASE_DIR = Path(__file__).parent.parent
 DATA_DIR = BASE_DIR / "data"
-
 CHANNEL_NAMES = ["JAZZ", "BOSSA", "BAMBU", "FOREST", "AURELIA", "ECOLIFE"]
 MAX_IMAGE_SIZE_MB = 200
 MAX_IMAGE_PIXELS = 4096 * 4096

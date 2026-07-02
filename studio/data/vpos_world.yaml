@@ -1,0 +1,58 @@
+# data/vpos_world.yaml
+worlds:
+  - id: W001
+    name: "Japanese Alley"
+    type: "Urban"
+    time: "Night"
+    density: "Dense"
+    weather: "Rain"
+    dna: "Neo Tokyo vibe"
+  - id: W002
+    name: "Paris Cafe"
+    type: "Urban"
+    time: "Day"
+    density: "Open"
+    weather: "Sunny"
+    dna: "Romantic"
+  - id: W003
+    name: "Kyoto Temple"
+    type: "Historic"
+    time: "Morning"
+    density: "Quiet"
+    weather: "Fog"
+    dna: "Zen"
+  - id: W004
+    name: "London Pub"
+    type: "Urban"
+    time: "Night"
+    density: "Medium"
+    weather: "Rain"
+    dna: "Moody"
+  - id: W005
+    name: "Desert Outpost"
+    type: "Arid"
+    time: "Day"
+    density: "Empty"
+    weather: "Heat"
+    dna: "Lonely"
+  - id: W006
+    name: "Cyberpunk Street"
+    type: "Future"
+    time: "Night"
+    density: "Dense"
+    weather: "Neon Rain"
+    dna: "High Tech"
+  - id: W007
+    name: "Mountain Village"
+    type: "Rural"
+    time: "Morning"
+    density: "Low"
+    weather: "Fog"
+    dna: "Peaceful"
+  - id: W008
+    name: "Harbor Dock"
+    type: "Industrial"
+    time: "Night"
+    density: "Medium"
+    weather: "Wind"
+    dna: "Cold"

@@ -1,3 +1,4 @@
+# models/detector_result.py
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional
 
@@ -43,6 +44,7 @@ class GapResult:
     missing: List[GapItem] = field(default_factory=list)
     conflicts: List[GapItem] = field(default_factory=list)
     extras: List[GapItem] = field(default_factory=list)
+    raw: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -70,4 +72,5 @@ class CreativePlan:
             "predicted_score": self.predicted_score,
             "recommendations": self.recommendations,
             "final_prompt": self.final_prompt,
+            "delta": self.delta,
         }

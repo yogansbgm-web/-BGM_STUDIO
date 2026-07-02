@@ -1,0 +1,37 @@
+# data/vpos_lighting.yaml
+lightings:
+  - id: L001
+    name: "Tungsten"
+    kelvin: 2700
+    contrast: "High"
+    shadow: "Soft"
+    direction: "Side"
+    mood: "Jazz"
+  - id: L002
+    name: "Moonlight"
+    kelvin: 9000
+    contrast: "Low"
+    shadow: "Hard"
+    direction: "Back"
+    mood: "Mystery"
+  - id: L003
+    name: "Neon"
+    kelvin: 5000
+    contrast: "High"
+    shadow: "Mixed"
+    direction: "All"
+    mood: "Cyberpunk"
+  - id: L004
+    name: "Golden Hour"
+    kelvin: 3200
+    contrast: "Medium"
+    shadow: "Soft"
+    direction: "Front"
+    mood: "Warm"
+  - id: L005
+    name: "Candle Light"
+    kelvin: 2000
+    contrast: "Low"
+    shadow: "Soft"
+    direction: "Close"
+    mood: "Intimate"
