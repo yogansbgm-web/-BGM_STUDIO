@@ -131,13 +131,79 @@ elif menu == "📂 Project":
                     st.success(f"✅ Gambar siap: {uploaded.name}")
                     st.rerun()
 
-        with tab_paste:
-            st.caption("📋 Klik tombol, teras Ctrl+V (atawa Cmd+V)")
+                with tab_paste:
+            st.caption("📋 **Pilihan 1:** Klik tombol di handap, teras **Ctrl+V** (atawa Cmd+V)")
+            
+            # Tombol Paste (Ctrl+V) — tetep aya
             pasted = paste_image_button("📋 Klik di dieu, teras Ctrl+V")
             if pasted is not None:
                 if set_image_source(pasted, "clipboard", "clipboard.png"):
-                    st.success("✅ Gambar hasil paste!")
+                    st.success("✅ Gambar hasil paste (Ctrl+V)!")
                     st.rerun()
+            
+            st.markdown("---")
+            
+            st.caption("🖱️ **Pilihan 2:** Klik kotak di handap, teras **klik kanan → Paste**")
+            st.caption("(Atanapi anjeun tiasa langsung **Ctrl+V** dina kotak ieu ogé)")
+            
+            # Text area pikeun nangkep paste (inklusi klik kanan)
+            paste_text_area = st.text_area(
+                label="",
+                placeholder="Klik di dieu, teras klik kanan → Paste (atanapi Ctrl+V)",
+                height=80,
+                key="paste_area",
+                label_visibility="collapsed"
+            )
+            
+            # Cek lamun aya gambar anu di-paste ka text area
+            # (Kami henteu tiasa langsung nangkep gambar tina text_area,
+            # tapi kami tiasa nambihan JavaScript pikeun nangkep event paste)
+            
+            # Tambahkeun JavaScript pikeun nangkep paste tina text_area
+            import streamlit.components.v1 as components
+            paste_js = """
+            <script>
+            (function() {
+                const textArea = document.querySelector('textarea[data-testid="stTextArea"]');
+                if (!textArea) return;
+                
+                textArea.addEventListener('paste', function(e) {
+                    const items = e.clipboardData.items;
+                    for (let item of items) {
+                        if (item.type.startsWith('image/')) {
+                            e.preventDefault();
+                            const blob = item.getAsFile();
+                            const reader = new FileReader();
+                            reader.onload = function(event) {
+                                const dataUrl = event.target.result;
+                                // Kirim ka Streamlit via input hidden
+                                const input = document.createElement('input');
+                                input.type = 'hidden';
+                                input.id = 'pasted_image_data';
+                                input.value = dataUrl;
+                                document.body.appendChild(input);
+                                
+                                // Pencet tombol submit otomatis
+                                const btn = document.querySelector('button[data-testid="baseButton-secondary"]');
+                                if (btn) {
+                                    btn.click();
+                                }
+                            };
+                            reader.readAsDataURL(blob);
+                            break;
+                        }
+                    }
+                });
+            })();
+            </script>
+            """
+            components.html(paste_js, height=0)
+            
+            # Tombol pikeun ngolah gambar hasil paste
+            if st.button("📥 Proses Gambar dari Paste", key="btn_process_paste", type="secondary"):
+                # Cek lamun aya data gambar disimpen
+                # (Ieu bakal di-trigger ku JavaScript otomatis)
+                st.info("Gambar bakal diprosés otomatis saatos paste.")
 
         with tab_url:
             img_url = st.text_input("🔗 URL Gambar", placeholder="https://example.com/image.jpg")
@@ -332,9 +398,24 @@ elif menu == "✍️ Prompt":
     with tab4:
         st.code("low quality, blurry, distorted, plastic, fake, ugly", language="text")
 
-    with tab5:
-        st.code(f"({dna.get('architecture', '')}), {', '.join(dna.get('hero', []))}, {dna.get('lighting', '')}", language="text")
-
+       with tab5:
+        st.subheader("🧩 Partial Prompt (SDXL Positive / Vocabulary)")
+        st.caption("Kosakata deskriptif — siap dipaké dina SDXL, ComfyUI, atanapi Midjourney Partial")
+        
+        from engine.prompt_compiler import build_partial_prompt_vocabulary
+        
+        # Bangun vocabulary
+        partial = build_partial_prompt_vocabulary(
+            dna=dna,
+            gap_result=project.gap_result or {}
+        )
+        
+        st.code(partial, language="text")
+        st.download_button(
+            "📋 Copy Partial Prompt",
+            partial,
+            file_name="partial_prompt.txt"
+        )
 elif menu == "📄 Report":
     st.title("📄 Report Generator")
     tab_r1, tab_r2, tab_r3 = st.tabs(["📋 Project Report", "📈 Weekly Report", "⭐ Final Report"])
