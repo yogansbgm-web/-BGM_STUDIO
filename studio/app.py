@@ -11,6 +11,9 @@ from pathlib import Path
 from PIL import Image
 import numpy as np
 
+# --- Path Base (folder tempat app.py aya) ---
+BASE_DIR = Path(__file__).parent
+
 # --- Konfigurasi Halaman ---
 st.set_page_config(
     page_title="VPD AI Creative Studio",
@@ -22,18 +25,21 @@ st.set_page_config(
 # --- Load Data (YAML) ---
 @st.cache_data
 def load_dna():
-    with open("data/channel_dna.yaml", "r") as f:
+    file_path = BASE_DIR / "data" / "channel_dna.yaml"
+    with open(file_path, "r") as f:
         return yaml.safe_load(f)
 
 @st.cache_data
 def load_knowledge():
-    with open("data/knowledge_graph.yaml", "r") as f:
+    file_path = BASE_DIR / "data" / "knowledge_graph.yaml"
+    with open(file_path, "r") as f:
         return yaml.safe_load(f)
 
 @st.cache_data
 def load_bgm():
     try:
-        with open("data/bgm_studio.yaml", "r") as f:
+        file_path = BASE_DIR / "data" / "bgm_studio.yaml"
+        with open(file_path, "r") as f:
             return yaml.safe_load(f)
     except FileNotFoundError:
         return {}
@@ -292,7 +298,6 @@ elif menu == "✍️ Prompt":
     with tab1:
         st.subheader("Midjourney Prompt")
         
-        # Gunakan final_prompt lamun aya, lamun henteu make DNA standar
         if st.session_state.final_prompt:
             prompt = st.session_state.final_prompt
             st.info("📌 Prompt Final ti AI Creative Director")
@@ -353,7 +358,6 @@ elif menu == "📄 Report":
     with tab_r1:
         st.subheader("📋 Project Report")
         
-        # Tampilkan Gap Analysis dina report
         gap = st.session_state.gap_analysis
         if gap:
             st.markdown(f"""
