@@ -1,6 +1,6 @@
 # VPD v7.1 - AI Creative Studio (FINAL)
 # Streamlit UI - Adobe Lightroom + VSCode Style
-# Integrated: BGM Studio + AI Creative Director + Gap Analysis
+# Integrated: BGM Studio + AI Creative Director + Gap Analysis + Link Input
 
 import streamlit as st
 import yaml
@@ -13,6 +13,12 @@ import numpy as np
 import streamlit.components.v1 as components
 import base64
 import io
+import requests
+import re
+from urllib.parse import urlparse
+
+# --- Path Base (folder tempat app.py aya) ---
+BASE_DIR = Path(__file__).parent
 
 # --- KOMPONEN PASTE GAMBAR (Ctrl+V) ---
 def paste_image_component():
@@ -37,7 +43,6 @@ def paste_image_component():
                     const dataUrl = event.target.result;
                     label.innerHTML = '✅ Gambar hasil ditempel! (Ukuran: ' + blob.size + ' bytes)';
                     box.style.borderColor = 'green';
-                    // Kirim ka Streamlit
                     window.parent.postMessage({
                         type: 'streamlit:setComponentValue',
                         value: dataUrl
@@ -65,17 +70,34 @@ def paste_image_component():
     
     if data:
         try:
-            # Hapus header "data:image/png;base64,"
             header, encoded = data.split(',', 1)
             img_data = base64.b64decode(encoded)
-            from PIL import Image
             return Image.open(io.BytesIO(img_data))
         except Exception as e:
             st.error(f"Error decoding image: {e}")
             return None
     return None
-# --- Path Base (folder tempat app.py aya) ---
-BASE_DIR = Path(__file__).parent
+
+# --- Fungsi pikeun ngundeur gambar tina URL ---
+def download_image_from_url(url):
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        img = Image.open(io.BytesIO(response.content))
+        return img
+    except Exception as e:
+        st.error(f"Gagal ngundeur gambar: {e}")
+        return None
+
+# --- Fungsi pikeun ékstrak YouTube thumbnail ---
+def get_youtube_thumbnail(url):
+    pattern = r'(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})'
+    match = re.search(pattern, url)
+    if match:
+        video_id = match.group(1)
+        thumbnail_url = f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg"
+        return thumbnail_url, video_id
+    return None, None
 
 # --- Konfigurasi Halaman ---
 st.set_page_config(
@@ -125,6 +147,8 @@ if 'revisions' not in st.session_state:
     st.session_state.revisions = []
 if 'final_prompt' not in st.session_state:
     st.session_state.final_prompt = ""
+if 'research_links' not in st.session_state:
+    st.session_state.research_links = []
 
 # --- SIDEBAR (8 MENU) ---
 with st.sidebar:
@@ -169,46 +193,120 @@ if menu == "🏠 Home":
 
 elif menu == "📂 Project":
     st.title("📂 Project Workspace")
+    
+    # --- BAGIAN KIRI: Upload + Input ---
+    col_upload, col_preview = st.columns([1, 2])
+    
     with col_upload:
-    st.subheader("📤 Upload Gambar")
-    
-    # 1. Upload standar (klik atanapi drag-and-drop)
-    uploaded_file = st.file_uploader("Pilih gambar", type=["jpg", "png", "jpeg"])
-    if uploaded_file is not None:
-        st.session_state.uploaded_image = Image.open(uploaded_file)
-        st.success("✅ Gambar siap!")
-        st.caption("Nama: " + uploaded_file.name)
+        st.subheader("📤 Input Gambar")
         
-        if st.button("🧹 Clear Image"):
-            st.session_state.uploaded_image = None
-            st.session_state.detection_result = {}
-            st.session_state.gap_analysis = {}
-            st.rerun()
-    
-    # 2. ATAU PASTE (Ctrl+V)
-    st.markdown("---")
-    st.caption("Atanapi paste langsung:")
-    pasted_img = paste_image_component()
-    if pasted_img is not None:
-        st.session_state.uploaded_image = pasted_img
-        st.success("✅ Gambar hasil paste!")
-        st.rerun()
+        # TAB INPUT: Upload | Link | YouTube | Riset
+        tab_upload, tab_link, tab_youtube, tab_riset = st.tabs(["📁 Upload", "🔗 Link Gambar", "▶️ YouTube", "📚 Riset"])
+        
+        # TAB 1: Upload Standar
+        with tab_upload:
+            uploaded_file = st.file_uploader("Pilih gambar", type=["jpg", "png", "jpeg"])
+            if uploaded_file is not None:
+                st.session_state.uploaded_image = Image.open(uploaded_file)
+                st.success("✅ Gambar siap!")
+                st.caption("Nama: " + uploaded_file.name)
                 
-    st.markdown("---")
-    st.subheader("🔄 Revision History")
-    if st.session_state.revisions:
-        for rev in st.session_state.revisions:
-            st.text(f"v{rev['id']}: {rev['score']}% - {rev['status']}")
-    else:
-        st.caption("Belum aya revisi.")
+                if st.button("🧹 Clear Image"):
+                    st.session_state.uploaded_image = None
+                    st.session_state.detection_result = {}
+                    st.session_state.gap_analysis = {}
+                    st.rerun()
+            
+            # Paste (Ctrl+V)
+            st.markdown("---")
+            st.caption("Atanapi paste langsung (Ctrl+V):")
+            pasted_img = paste_image_component()
+            if pasted_img is not None:
+                st.session_state.uploaded_image = pasted_img
+                st.success("✅ Gambar hasil paste!")
+                st.rerun()
+        
+        # TAB 2: Link Gambar
+        with tab_link:
+            st.caption("Tempel link gambar (JPG, PNG, JPEG)")
+            img_url = st.text_input("URL Gambar", placeholder="https://example.com/image.jpg")
+            if st.button("📥 Download & Analisis", key="btn_img_url"):
+                if img_url:
+                    with st.spinner("Ngundeur gambar..."):
+                        img = download_image_from_url(img_url)
+                        if img:
+                            st.session_state.uploaded_image = img
+                            st.success("✅ Gambar hasil download!")
+                            st.rerun()
+                else:
+                    st.warning("Masukkan URL heula.")
+        
+        # TAB 3: YouTube
+        with tab_youtube:
+            st.caption("Tempel link YouTube pikeun inspirasi visual")
+            yt_url = st.text_input("URL YouTube", placeholder="https://www.youtube.com/watch?v=...")
+            if yt_url:
+                thumbnail, video_id = get_youtube_thumbnail(yt_url)
+                if thumbnail:
+                    st.image(thumbnail, caption=f"Thumbnail YouTube: {video_id}", use_column_width=True)
+                    st.caption(f"📹 Video ID: {video_id}")
+                    st.info("💡 Thumbnail tiasa dianggo salaku referensi visual.")
+                    
+                    if st.button("🎬 Gunakeun Thumbnail pikeun Analisis"):
+                        img = download_image_from_url(thumbnail)
+                        if img:
+                            st.session_state.uploaded_image = img
+                            st.success("✅ Thumbnail dijadikeun gambar analisis!")
+                            st.rerun()
+                else:
+                    st.warning("Link YouTube teu valid.")
+        
+        # TAB 4: Link Riset
+        with tab_riset:
+            st.caption("Tempel link artikel / riset pikeun rujukan")
+            research_url = st.text_input("URL Riset", placeholder="https://example.com/article")
+            research_note = st.text_area("📝 Catatan / Kutipan", placeholder="Tulis catetan atanapi kutipan penting...")
+            
+            if st.button("💾 Simpan Riset", key="btn_research"):
+                if research_url or research_note:
+                    st.session_state.research_links.append({
+                        "url": research_url,
+                        "note": research_note,
+                        "date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+                    })
+                    st.success("✅ Link riset disimpen!")
+                else:
+                    st.warning("Isi URL atanapi catetan heula.")
+            
+            # Tampilkeun daftar riset
+            if st.session_state.research_links:
+                st.markdown("---")
+                st.subheader("📚 Daftar Riset Disimpen")
+                for i, item in enumerate(st.session_state.research_links):
+                    with st.expander(f"📄 Riset {i+1} - {item['date']}"):
+                        if item['url']:
+                            st.markdown(f"**🔗 URL:** {item['url']}")
+                        if item['note']:
+                            st.markdown(f"**📝 Catatan:** {item['note']}")
+                        if st.button(f"🗑️ Hapus {i+1}", key=f"del_research_{i}"):
+                            st.session_state.research_links.pop(i)
+                            st.rerun()
+        
+        st.markdown("---")
+        st.subheader("🔄 Revision History")
+        if st.session_state.revisions:
+            for rev in st.session_state.revisions:
+                st.text(f"v{rev['id']}: {rev['score']}% - {rev['status']}")
+        else:
+            st.caption("Belum aya revisi.")
     
     with col_preview:
-        st.subheader("Preview")
+        st.subheader("🖼️ Preview")
         if st.session_state.uploaded_image:
             st.image(st.session_state.uploaded_image, use_column_width=True)
             st.info(f"🔮 Current Channel: **{st.session_state.current_channel}**")
         else:
-            st.warning("Tonggo, upload gambar heula!")
+            st.warning("📤 Upload, paste, atanapi masukkan link gambar heula!")
 
 elif menu == "🔍 Detector":
     st.title("🔍 Detector & AI Creative Director")
@@ -218,7 +316,7 @@ elif menu == "🔍 Detector":
     else:
         if st.button("⚡ Analyze Image", type="primary"):
             with st.spinner("Analyzing Visual DNA & Gap Analysis..."):
-                # SIMULASI DETECTOR (OpenCV engké)
+                # SIMULASI DETECTOR
                 st.session_state.detection_result = {
                     "Architecture": 91,
                     "Material": 98,
@@ -229,7 +327,7 @@ elif menu == "🔍 Detector":
                     "Confidence": 74
                 }
                 
-                # SIMULASI GAP ANALYSIS (AI Creative Director)
+                # SIMULASI GAP ANALYSIS
                 st.session_state.gap_analysis = {
                     "channel": "JAZZ",
                     "confidence": 74,
@@ -282,7 +380,6 @@ elif menu == "🔍 Detector":
                 st.subheader("🧠 AI Creative Director")
                 
                 if gap:
-                    # Gap Analysis
                     st.markdown("**📊 Gap Analysis:**")
                     
                     if gap.get("match"):
@@ -307,7 +404,6 @@ elif menu == "🔍 Detector":
                     
                     st.markdown("---")
                     
-                    # Rekomendasi
                     st.markdown("**💡 Rekomendasi (Prioritas):**")
                     for i, rec in enumerate(gap.get("recommendations", []), 1):
                         icon = "🔥" if rec["priority"] == "HIGH" else "🟡"
@@ -315,7 +411,6 @@ elif menu == "🔍 Detector":
                     
                     st.markdown("---")
                     
-                    # Prediksi Skor
                     col_a, col_b = st.columns(2)
                     with col_a:
                         st.metric("Skor Ayeuna", f"{gap.get('confidence', 0)}%")
@@ -323,7 +418,6 @@ elif menu == "🔍 Detector":
                         st.metric("Prediksi Skor", f"{gap.get('predicted_score', 0)}%", 
                                  delta=f"+{gap.get('predicted_score', 0) - gap.get('confidence', 0)}%")
                     
-                    # Tombol Terapkan ke Prompt
                     if st.button("📋 Terapkan ke Prompt", type="primary"):
                         st.session_state.final_prompt = gap.get("final_prompt", "")
                         st.success("✅ Prompt Final disimpen! Buka menu ✍️ Prompt → IMAGE.")
