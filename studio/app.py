@@ -1,4 +1,4 @@
-# YOGANS BGM STUDIO v7.1 - AI Creative Studio (INPUT HUB - CLEAN)
+# YOGANS BGM STUDIO v7.1 - AI Creative Studio (FINAL)
 # Streamlit UI - Adobe Lightroom + VSCode Style
 # Integrated: BGM Studio + AI Creative Director + Gap Analysis
 # Input Hub: Upload, Paste, URL, YouTube, Riset
@@ -13,6 +13,7 @@ from pathlib import Path
 from PIL import Image
 import numpy as np
 import io
+import base64
 import requests
 import re
 from urllib.parse import urlparse
@@ -33,13 +34,69 @@ class ImageSource:
     metadata: dict = None
 
     def __post_init__(self):
-        if self.image:
-            self.width, self.height = self.image.size
-        if self.metadata is None:
-            self.metadata = {}
+        if self.image is not None:
+            try:
+                self.width, self.height = self.image.size
+            except AttributeError:
+                pass
 
 # --- Path Base ---
 BASE_DIR = Path(__file__).parent
+
+# --- FUNGSI KONVERSI KE PIL (Robust) ---
+def convert_to_pil(img):
+    """Robust converter: accepts PIL, bytes, base64, numpy, dict, and more."""
+    if img is None:
+        return None
+
+    # 1. Sudah PIL
+    if isinstance(img, Image.Image):
+        return img
+
+    # 2. Bytes
+    if isinstance(img, bytes):
+        try:
+            return Image.open(io.BytesIO(img))
+        except Exception:
+            pass
+
+    # 3. Base64 string (data:image/...)
+    if isinstance(img, str):
+        if img.startswith('data:image'):
+            try:
+                header, encoded = img.split(',', 1)
+                data = base64.b64decode(encoded)
+                return Image.open(io.BytesIO(data))
+            except Exception:
+                pass
+        # Mungkin file path
+        try:
+            return Image.open(img)
+        except Exception:
+            pass
+
+    # 4. Numpy array
+    if isinstance(img, np.ndarray):
+        try:
+            return Image.fromarray(img)
+        except Exception:
+            pass
+
+    # 5. Dict (misalna { "image": bytes, ... })
+    if isinstance(img, dict):
+        for key in ['image', 'img', 'data', 'blob']:
+            if key in img:
+                return convert_to_pil(img[key])
+
+    # 6. List/tuple (anggap ieu array RGB)
+    if isinstance(img, (list, tuple)):
+        try:
+            arr = np.array(img)
+            return Image.fromarray(arr)
+        except Exception:
+            pass
+
+    return None
 
 # --- Fungsi Download Gambar ---
 def download_image_from_url(url):
@@ -67,15 +124,22 @@ def get_youtube_thumbnail(url):
     return None, None
 
 # --- Helper: Set Image Source ---
-def set_image_source(img: Image.Image, source: str, filename: str = "untitled.png"):
-    if img:
-        st.session_state.image_source = ImageSource(
-            image=img,
-            source=source,
-            filename=filename
-        )
-        return True
-    return False
+def set_image_source(img, source: str, filename: str = "untitled.png"):
+    if img is None:
+        return False
+
+    # Konversi ke PIL jika perlu
+    pil_img = convert_to_pil(img)
+    if pil_img is None:
+        st.error("Gagal ngolah gambar. Pastikeun format gambar didukung.")
+        return False
+
+    st.session_state.image_source = ImageSource(
+        image=pil_img,
+        source=source,
+        filename=filename
+    )
+    return True
 
 def get_current_image():
     if st.session_state.image_source:
@@ -187,6 +251,7 @@ elif menu == "📂 Project":
             "📁 Upload", "📋 Paste", "🔗 URL", "▶️ YouTube", "📚 Riset"
         ])
         
+        # TAB 1: Upload
         with tab_upload:
             st.caption("Upload gambar atanapi drag & drop")
             uploaded_file = st.file_uploader(
@@ -200,14 +265,22 @@ elif menu == "📂 Project":
                     st.success(f"✅ Gambar siap: {uploaded_file.name}")
                     st.rerun()
         
+        # TAB 2: Paste (dengan konversi otomatis)
         with tab_paste:
             st.caption("📋 Klik tombol di handap, teras Ctrl+V (atawa Cmd+V) pikeun nempel gambar")
             pasted = paste_image_button("📋 Klik di dieu, teras Ctrl+V")
+            
             if pasted is not None:
-                if set_image_source(pasted, "clipboard", "clipboard.png"):
-                    st.success("✅ Gambar hasil paste!")
-                    st.rerun()
+                # Konversi otomatis
+                img = convert_to_pil(pasted)
+                if img is not None:
+                    if set_image_source(img, "clipboard", "clipboard.png"):
+                        st.success("✅ Gambar hasil paste!")
+                        st.rerun()
+                else:
+                    st.error(f"Gagal ngolah gambar. Tipe: {type(pasted)}. Pastikeun gambar tiasa di-paste.")
         
+        # TAB 3: URL
         with tab_url:
             st.caption("Tempel link gambar (JPG, PNG, JPEG)")
             img_url = st.text_input("URL Gambar", placeholder="https://example.com/image.jpg")
@@ -223,6 +296,7 @@ elif menu == "📂 Project":
                 else:
                     st.warning("Masukkan URL heula.")
         
+        # TAB 4: YouTube
         with tab_youtube:
             st.caption("Tempel link YouTube pikeun inspirasi visual")
             yt_url = st.text_input("URL YouTube", placeholder="https://www.youtube.com/watch?v=...")
@@ -254,6 +328,7 @@ elif menu == "📂 Project":
                 else:
                     st.warning("Link YouTube teu valid.")
         
+        # TAB 5: Riset
         with tab_riset:
             st.caption("Tempel link artikel / riset pikeun rujukan")
             research_url = st.text_input("URL Riset", placeholder="https://example.com/article")
@@ -283,6 +358,7 @@ elif menu == "📂 Project":
                             st.session_state.research_links.pop(i)
                             st.rerun()
         
+        # --- INFO SUMBER GAMBAR ---
         if st.session_state.image_source:
             src = st.session_state.image_source
             st.markdown("---")
@@ -295,6 +371,7 @@ elif menu == "📂 Project":
                 st.session_state.gap_analysis = {}
                 st.rerun()
         
+        # --- REVISION HISTORY ---
         st.markdown("---")
         st.subheader("🔄 Revision History")
         if st.session_state.revisions:
