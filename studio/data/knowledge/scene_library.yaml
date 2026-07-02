@@ -1,0 +1,66 @@
+# data/knowledge/scene_library.yaml
+scenes:
+  - id: "SC001"
+    name: "Speakeasy"
+    channel: ["JAZZ"]
+    attributes:
+      architecture: "Speakeasy, Jazz Club, Whiskey Bar"
+      material: "Walnut, Leather, Brass, Velvet"
+      lighting: "Amber, Low Key, Candle"
+      fx: "Smoke, Rain, Dust"
+      mood: "Luxury, Night, Cozy"
+      camera: "35mm, 50mm"
+      anchor: "Piano, Bar, Whiskey Glass"
+    variants:
+      - "Luxury"
+      - "Vintage"
+      - "Rain"
+      - "Minimal"
+  - id: "SC002"
+    name: "Bamboo Forest"
+    channel: ["BAMBU", "FOREST"]
+    attributes:
+      architecture: "Teahouse, Path, Temple"
+      material: "Bamboo, Rice Paper, Stone"
+      lighting: "Overcast, Dappled, Soft"
+      fx: "Mist, Dew, Steam"
+      mood: "Zen, Calm, Meditative"
+      camera: "24mm, 50mm"
+      anchor: "Bamboo, Stone Lantern, Water"
+    variants:
+      - "Zen"
+      - "Mystical"
+      - "Minimal"
+      - "Rain"
+  - id: "SC003"
+    name: "Lofi Study Room"
+    channel: ["AURELIA"]
+    attributes:
+      architecture: "Study Room, Bedroom"
+      material: "Wood, Paper, Fabric"
+      lighting: "Desk Lamp, Soft"
+      fx: "Dust Motes, Warm Glow"
+      mood: "Focused, Nostalgic, Cozy"
+      camera: "50mm, 85mm"
+      anchor: "Desk, Books, Laptop"
+    variants:
+      - "Cozy"
+      - "Rainy"
+      - "Nocturnal"
+      - "Minimal"
+  - id: "SC004"
+    name: "Coastal Cafe"
+    channel: ["BOSSA"]
+    attributes:
+      architecture: "Beach House, Terrace"
+      material: "Wood, Rattan, Linen"
+      lighting: "Golden Hour, Sun"
+      fx: "Sun Flare, Breeze"
+      mood: "Relaxed, Warm, Productive"
+      camera: "24mm, 35mm"
+      anchor: "Coffee, Ocean, Palm"
+    variants:
+      - "Sunset"
+      - "Morning"
+      - "Tropical"
+      - "Minimal"

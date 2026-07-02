@@ -1,0 +1,27 @@
+# data/knowledge/vocabulary.yaml
+vocabulary:
+  luxury:
+    - "Elegant"
+    - "Premium"
+    - "Classic"
+    - "Refined"
+  vintage:
+    - "Weathered"
+    - "Aged"
+    - "Rustic"
+    - "Antique"
+  rain:
+    - "Rainy"
+    - "Damp"
+    - "Stormy"
+    - "Misty"
+  cozy:
+    - "Warm"
+    - "Intimate"
+    - "Snug"
+    - "Inviting"
+  zen:
+    - "Peaceful"
+    - "Serene"
+    - "Harmonious"
+    - "Minimal"

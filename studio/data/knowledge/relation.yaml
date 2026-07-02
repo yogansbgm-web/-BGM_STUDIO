@@ -1,0 +1,26 @@
+# data/knowledge/relation.yaml
+relations:
+  - source: "Rain"
+    target: "Smoke"
+    strength: 0.8
+    context: ["JAZZ", "NIGHT"]
+  - source: "Rain"
+    target: "Window"
+    strength: 0.95
+    context: ["JAZZ", "AURELIA"]
+  - source: "Bamboo"
+    target: "Mist"
+    strength: 0.9
+    context: ["BAMBU"]
+  - source: "Coffee"
+    target: "Ocean"
+    strength: 0.6
+    context: ["BOSSA"]
+  - source: "Desk"
+    target: "Books"
+    strength: 0.95
+    context: ["AURELIA"]
+  - source: "Smoke"
+    target: "Piano"
+    strength: 0.85
+    context: ["JAZZ"]

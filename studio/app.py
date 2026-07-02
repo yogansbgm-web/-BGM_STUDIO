@@ -330,29 +330,40 @@ elif menu == "🔍 Analyze":
         st.warning("📤 Input gambar heula di Project.")
     else:
         if st.button("⚡ Analyze Image", type="primary", use_container_width=True):
-            with st.spinner("Analyzing..."):
+            with st.spinner("AI Reading Image..."):
                 try:
-                    detector = get_detector()
-                    det_result = detector.detect(img)
-                    project.detector_result = det_result.to_dict()
+                    from engine.workflow.pipeline import Pipeline
+                    pipeline = Pipeline()
                     
-                    gap_analyzer = GapAnalyzer()
-                    dna_channel = DNA.get(project.channel, {})
-                    gap_result = gap_analyzer.analyze(det_result, dna_channel)
-                    project.gap_result = gap_result.to_dict()
+                    result = pipeline.run(
+                        image=img,
+                        project=project,
+                        dna=DNA
+                    )
                     
-                    director = CreativeDirector()
-                    creative_plan = director.generate(gap_result, dna_channel)
-                    project.creative_result = creative_plan.to_dict()
-                    project.final_prompt = creative_plan.final_prompt
+                    # Simpen hasil tambahan
+                    project.matched_scene = result.get("scene")
+                    project.extracted_attributes = result.get("attributes")
+                    project.suggested_attributes = result.get("suggested")
+                    project.learned = result.get("learned")
+                    project.variants = result.get("variants")
+                    project.motion_plan = result.get("motion")
+                    project.music_plan = result.get("music")
                     
-                    st.success("✅ Analysis Complete!")
+                    st.success("✅ AI Analysis Complete!")
+                    
+                    scene = result.get("scene")
+                    if scene:
+                        st.info(f"🏠 **Scene Detected:** {scene.get('name')} (Score: {scene.get('score', 0)}%)")
+                    
                     agnes_suggestion = agnes_suggest(project)
                     with st.expander("🤖 Agnes Saran"):
                         st.info(agnes_suggestion)
+                        
                 except VPDError as e:
                     st.error(f"❌ {e}")
         
+        # ---- TAMPILKAN HASIL ----
         if project.detector_result:
             res = project.detector_result
             col1, col2 = st.columns(2)
@@ -367,6 +378,7 @@ elif menu == "🔍 Analyze":
                 })
                 st.metric("Channel", res.get("channel", "-"))
                 st.metric("Confidence", f"{res.get('confidence', 0)}%")
+            
             with col2:
                 st.subheader("🧠 Gap Analysis")
                 if project.gap_result:
@@ -385,6 +397,66 @@ elif menu == "🔍 Analyze":
                     st.metric("Predicted Score", f"{cr.get('predicted_score', 0)}%")
                     if st.button("📋 Terapkan ke Prompt"):
                         st.success("Prompt siap di tab ✍️ Prompt")
+            
+            # --- DNA FUSION ---
+            if hasattr(project, 'fused_result') and project.fused_result:
+                st.markdown("---")
+                st.subheader("🧬 DNA Fusion")
+                fused = project.fused_result
+                attrs = fused.get("fused_attributes", {})
+                st.success(f"**{attrs.get('fusion_name', 'Fusion')}**")
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    st.caption(f"🏛️ Architecture: {attrs.get('architecture', '-')}")
+                    st.caption(f"💡 Lighting: {attrs.get('lighting', '-')}")
+                    st.caption(f"📷 Camera: {attrs.get('camera', '-')}")
+                with col_b:
+                    st.caption(f"🎨 Materials: {', '.join(attrs.get('material', []))}")
+                    st.caption(f"🎭 Mood: {', '.join(attrs.get('mood', []))}")
+                    st.caption(f"✨ FX: {', '.join(attrs.get('fx', []))}")
+            
+            # --- Scene & Variants ---
+            if project.matched_scene:
+                st.markdown("---")
+                st.subheader("🏠 Scene Detection")
+                scene = project.matched_scene
+                st.info(f"**Scene:** {scene.get('name')} (Score: {scene.get('score', 0)}%)")
+            
+            if hasattr(project, 'variants') and project.variants:
+                st.markdown("---")
+                st.subheader("🎨 Creative Variants")
+                cols = st.columns(3)
+                for i, var in enumerate(project.variants[:3]):
+                    with cols[i]:
+                        st.caption(f"**{var.get('version', 'Variant')}**")
+                        st.caption(var.get('description', '')[:60])
+            
+            if hasattr(project, 'motion_plan') and project.motion_plan:
+                st.markdown("---")
+                st.subheader("🎬 Motion Plan")
+                motion = project.motion_plan
+                st.caption(f"**Primary:** {motion.get('primary', '—')}")
+                st.caption(f"**Camera:** {motion.get('camera', '—')}")
+            
+            if hasattr(project, 'music_plan') and project.music_plan:
+                st.markdown("---")
+                st.subheader("🎵 Music Suggestion")
+                music = project.music_plan
+                st.caption(f"**Genre:** {music.get('genre', '—')}")
+                st.caption(f"**Mood:** {music.get('mood', '—')}")
+            
+            # --- Knowledge Learned ---
+            if hasattr(project, 'learned') and project.learned:
+                st.markdown("---")
+                st.subheader("🧠 Knowledge Learned")
+                learned = project.learned
+                new_vocab = learned.get('new_vocabulary', [])
+                if new_vocab:
+                    st.caption(f"**New Vocabulary:** {', '.join(new_vocab)}")
+                new_relations = learned.get('new_relations', [])
+                if new_relations:
+                    st.caption(f"**New Relations:** {len(new_relations)} added")
+                st.caption(f"**Confidence:** {learned.get('confidence', 0)}%")
 
 elif menu == "🧬 DNA":
     st.title("🧬 Visual DNA Card")
