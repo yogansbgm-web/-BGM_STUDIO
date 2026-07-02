@@ -12,11 +12,11 @@ CHANNEL_NAMES = ["JAZZ", "BOSSA", "BAMBU", "FOREST", "AURELIA", "ECOLIFE"]
 
 # --- Image constraints ---
 MAX_IMAGE_SIZE_MB = 200
-MAX_IMAGE_PIXELS = 4096 * 4096          # 16 MP
+MAX_IMAGE_PIXELS = 4096 * 4096
 SUPPORTED_IMAGE_TYPES = ["jpg", "jpeg", "png", "webp", "bmp", "tiff"]
 
 # --- Detector ---
-DEFAULT_CONFIDENCE_THRESHOLD = 70       # PASS ≥ 70
+DEFAULT_CONFIDENCE_THRESHOLD = 70
 
 # --- Export ---
 EXPORT_FORMATS = ["ZIP", "PDF", "JSON", "YAML"]
