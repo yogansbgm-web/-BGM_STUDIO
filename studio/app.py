@@ -84,7 +84,7 @@ def convert_to_pil(img):
 
     # 5. Dict (misalna { "image": bytes, ... })
     if isinstance(img, dict):
-        for key in ['image', 'img', 'data', 'blob']:
+        for key in ['image', 'img', 'data', 'blob', 'value']:
             if key in img:
                 return convert_to_pil(img[key])
 
@@ -265,7 +265,7 @@ elif menu == "📂 Project":
                     st.success(f"✅ Gambar siap: {uploaded_file.name}")
                     st.rerun()
         
-        # TAB 2: Paste (dengan konversi otomatis)
+        # TAB 2: Paste (dengan konversi otomatis + fallback)
         with tab_paste:
             st.caption("📋 Klik tombol di handap, teras Ctrl+V (atawa Cmd+V) pikeun nempel gambar")
             pasted = paste_image_button("📋 Klik di dieu, teras Ctrl+V")
