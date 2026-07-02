@@ -10,7 +10,70 @@ import datetime
 from pathlib import Path
 from PIL import Image
 import numpy as np
+import streamlit.components.v1 as components
+import base64
+import io
 
+# --- KOMPONEN PASTE GAMBAR (Ctrl+V) ---
+def paste_image_component():
+    html_code = """
+    <div id="paste-box" style="border: 2px dashed #ccc; padding: 20px; text-align: center; border-radius: 10px; background-color: #f9f9f9; min-height: 100px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+        <span id="paste-label">📋 Klik di dieu, teras pencét Ctrl+V (atawa Cmd+V) pikeun nempel gambar</span>
+    </div>
+    <script>
+    const box = document.getElementById('paste-box');
+    const label = document.getElementById('paste-label');
+
+    box.addEventListener('paste', function(e) {
+        e.preventDefault();
+        const items = e.clipboardData.items;
+        let found = false;
+
+        for (let item of items) {
+            if (item.type.startsWith('image/')) {
+                const blob = item.getAsFile();
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const dataUrl = event.target.result;
+                    label.innerHTML = '✅ Gambar hasil ditempel! (Ukuran: ' + blob.size + ' bytes)';
+                    box.style.borderColor = 'green';
+                    // Kirim ka Streamlit
+                    window.parent.postMessage({
+                        type: 'streamlit:setComponentValue',
+                        value: dataUrl
+                    }, '*');
+                };
+                reader.readAsDataURL(blob);
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            label.innerHTML = '❌ Henteu aya gambar dina clipboard. Copy gambar heula!';
+            box.style.borderColor = 'red';
+            setTimeout(() => {
+                label.innerHTML = '📋 Klik di dieu, teras pencét Ctrl+V (atawa Cmd+V) pikeun nempel gambar';
+                box.style.borderColor = '#ccc';
+            }, 3000);
+        }
+    });
+    </script>
+    """
+    
+    data = components.html(html_code, height=150, key="paste_component")
+    
+    if data:
+        try:
+            # Hapus header "data:image/png;base64,"
+            header, encoded = data.split(',', 1)
+            img_data = base64.b64decode(encoded)
+            from PIL import Image
+            return Image.open(io.BytesIO(img_data))
+        except Exception as e:
+            st.error(f"Error decoding image: {e}")
+            return None
+    return None
 # --- Path Base (folder tempat app.py aya) ---
 BASE_DIR = Path(__file__).parent
 
@@ -106,28 +169,38 @@ if menu == "🏠 Home":
 
 elif menu == "📂 Project":
     st.title("📂 Project Workspace")
-    col_upload, col_preview = st.columns([1, 2])
-    
     with col_upload:
-        uploaded_file = st.file_uploader("Upload Image", type=["jpg", "png", "jpeg"])
-        if uploaded_file is not None:
-            st.session_state.uploaded_image = Image.open(uploaded_file)
-            st.success("✅ Gambar siap!")
-            st.caption("Nama: " + uploaded_file.name)
-            
-            if st.button("🧹 Clear Image"):
-                st.session_state.uploaded_image = None
-                st.session_state.detection_result = {}
-                st.session_state.gap_analysis = {}
-                st.rerun()
+    st.subheader("📤 Upload Gambar")
+    
+    # 1. Upload standar (klik atanapi drag-and-drop)
+    uploaded_file = st.file_uploader("Pilih gambar", type=["jpg", "png", "jpeg"])
+    if uploaded_file is not None:
+        st.session_state.uploaded_image = Image.open(uploaded_file)
+        st.success("✅ Gambar siap!")
+        st.caption("Nama: " + uploaded_file.name)
+        
+        if st.button("🧹 Clear Image"):
+            st.session_state.uploaded_image = None
+            st.session_state.detection_result = {}
+            st.session_state.gap_analysis = {}
+            st.rerun()
+    
+    # 2. ATAU PASTE (Ctrl+V)
+    st.markdown("---")
+    st.caption("Atanapi paste langsung:")
+    pasted_img = paste_image_component()
+    if pasted_img is not None:
+        st.session_state.uploaded_image = pasted_img
+        st.success("✅ Gambar hasil paste!")
+        st.rerun()
                 
-        st.markdown("---")
-        st.subheader("🔄 Revision History")
-        if st.session_state.revisions:
-            for rev in st.session_state.revisions:
-                st.text(f"v{rev['id']}: {rev['score']}% - {rev['status']}")
-        else:
-            st.caption("Belum aya revisi.")
+    st.markdown("---")
+    st.subheader("🔄 Revision History")
+    if st.session_state.revisions:
+        for rev in st.session_state.revisions:
+            st.text(f"v{rev['id']}: {rev['score']}% - {rev['status']}")
+    else:
+        st.caption("Belum aya revisi.")
     
     with col_preview:
         st.subheader("Preview")
