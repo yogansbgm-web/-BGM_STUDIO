@@ -38,34 +38,25 @@ st.set_page_config(
 
 # ---- Load YAML data ----
 @st.cache_data(ttl=300)
-def load_dna():
-    file_path = DATA_DIR / "channel_dna.yaml"
-    with open(file_path, "r") as f:
-        return yaml.safe_load(f)
-
-@st.cache_data(ttl=300)
-def load_knowledge():
-    file_path = DATA_DIR / "knowledge_graph.yaml"
-    with open(file_path, "r") as f:
-        return yaml.safe_load(f)
-
-@st.cache_data(ttl=300)
-def load_bgm():
-    try:
-        file_path = DATA_DIR / "bgm_studio.yaml"
-        with open(file_path, "r") as f:
-            return yaml.safe_load(f)
-    except FileNotFoundError:
-        return {}
-
-@st.cache_data(ttl=300)
 def load_vpos():
     try:
+        world_path = DATA_DIR / "vpos_world.yaml"
+        with open(world_path, "r") as f:
+            worlds = yaml.safe_load(f)
+        hero_path = DATA_DIR / "vpos_hero.yaml"
+        with open(hero_path, "r") as f:
+            heroes = yaml.safe_load(f)
+        lighting_path = DATA_DIR / "vpos_lighting.yaml"
+        with open(lighting_path, "r") as f:
+            lightings = yaml.safe_load(f)
+        material_path = DATA_DIR / "vpos_material.yaml"
+        with open(material_path, "r") as f:
+            materials = yaml.safe_load(f)
         return {
-            "worlds": yaml.safe_load(DATA_DIR / "vpos_world.yaml"),
-            "heroes": yaml.safe_load(DATA_DIR / "vpos_hero.yaml"),
-            "lightings": yaml.safe_load(DATA_DIR / "vpos_lighting.yaml"),
-            "materials": yaml.safe_load(DATA_DIR / "vpos_material.yaml"),
+            "worlds": worlds,
+            "heroes": heroes,
+            "lightings": lightings,
+            "materials": materials,
         }
     except FileNotFoundError:
         return {"worlds": [], "heroes": [], "lightings": [], "materials": []}
