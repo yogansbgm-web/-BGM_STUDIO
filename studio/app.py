@@ -1,4 +1,4 @@
-# VPD v7.1 - AI Creative Studio (INPUT HUB - CLEAN)
+# YOGANS BGN STUDIO v7.1 - AI Creative Studio (INPUT HUB - CLEAN)
 # Streamlit UI - Adobe Lightroom + VSCode Style
 # Integrated: BGM Studio + AI Creative Director + Gap Analysis
 # Input Hub: Upload, Paste, URL, YouTube, Riset
