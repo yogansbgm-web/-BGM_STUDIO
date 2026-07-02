@@ -363,7 +363,7 @@ elif menu == "🔍 Analyze":
                 except VPDError as e:
                     st.error(f"❌ {e}")
         
-        # ---- TAMPILKAN HASIL ----
+        # ---- Tampilkeun Hasil ----
         if project.detector_result:
             res = project.detector_result
             col1, col2 = st.columns(2)
@@ -415,13 +415,14 @@ elif menu == "🔍 Analyze":
                     st.caption(f"🎭 Mood: {', '.join(attrs.get('mood', []))}")
                     st.caption(f"✨ FX: {', '.join(attrs.get('fx', []))}")
             
-            # --- Scene & Variants ---
+            # --- Scene Detection ---
             if project.matched_scene:
                 st.markdown("---")
                 st.subheader("🏠 Scene Detection")
                 scene = project.matched_scene
                 st.info(f"**Scene:** {scene.get('name')} (Score: {scene.get('score', 0)}%)")
             
+            # --- Creative Variants ---
             if hasattr(project, 'variants') and project.variants:
                 st.markdown("---")
                 st.subheader("🎨 Creative Variants")
@@ -431,6 +432,7 @@ elif menu == "🔍 Analyze":
                         st.caption(f"**{var.get('version', 'Variant')}**")
                         st.caption(var.get('description', '')[:60])
             
+            # --- Motion Plan ---
             if hasattr(project, 'motion_plan') and project.motion_plan:
                 st.markdown("---")
                 st.subheader("🎬 Motion Plan")
@@ -438,6 +440,7 @@ elif menu == "🔍 Analyze":
                 st.caption(f"**Primary:** {motion.get('primary', '—')}")
                 st.caption(f"**Camera:** {motion.get('camera', '—')}")
             
+            # --- Music Suggestion ---
             if hasattr(project, 'music_plan') and project.music_plan:
                 st.markdown("---")
                 st.subheader("🎵 Music Suggestion")
