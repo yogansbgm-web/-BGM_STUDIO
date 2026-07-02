@@ -1,4 +1,4 @@
-# YOGANS BGN STUDIO v7.1 - AI Creative Studio (INPUT HUB - CLEAN)
+# YOGANS BGM STUDIO v7.1 - AI Creative Studio (INPUT HUB - CLEAN)
 # Streamlit UI - Adobe Lightroom + VSCode Style
 # Integrated: BGM Studio + AI Creative Director + Gap Analysis
 # Input Hub: Upload, Paste, URL, YouTube, Riset
@@ -58,7 +58,6 @@ def get_youtube_thumbnail(url):
     match = re.search(pattern, url)
     if match:
         video_id = match.group(1)
-        # Coba maxresdefault heula, fallback ka hqdefault
         thumbnail_urls = [
             f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg",
             f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg",
@@ -136,7 +135,7 @@ if 'research_links' not in st.session_state:
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.image("https://placehold.co/200x60/1a1a1a/FFB800?text=VPD+STUDIO", use_column_width=True)
+    st.image("https://placehold.co/200x60/1a1a1a/FFB800?text=YOGANS+BGM+STUDIO", use_column_width=True)
     st.markdown("---")
     
     menu = st.radio(
@@ -152,7 +151,7 @@ with st.sidebar:
 st.markdown("---")
 
 if menu == "🏠 Home":
-    st.title("🎨 VPD AI Creative Studio")
+    st.title("🎨 YOGANS BGM STUDIO AI Creative Studio")
     st.caption("Visual Production Database — FROZEN v7.1")
     
     col1, col2, col3 = st.columns(3)
@@ -184,12 +183,10 @@ elif menu == "📂 Project":
     with col_input:
         st.subheader("📤 Input Hub")
         
-        # --- TAB INPUT ---
         tab_upload, tab_paste, tab_url, tab_youtube, tab_riset = st.tabs([
             "📁 Upload", "📋 Paste", "🔗 URL", "▶️ YouTube", "📚 Riset"
         ])
         
-        # TAB 1: Upload
         with tab_upload:
             st.caption("Upload gambar atanapi drag & drop")
             uploaded_file = st.file_uploader(
@@ -203,7 +200,6 @@ elif menu == "📂 Project":
                     st.success(f"✅ Gambar siap: {uploaded_file.name}")
                     st.rerun()
         
-        # TAB 2: Paste (streamlit-paste-button)
         with tab_paste:
             st.caption("📋 Klik tombol di handap, teras Ctrl+V (atawa Cmd+V) pikeun nempel gambar")
             pasted = paste_image_button("📋 Klik di dieu, teras Ctrl+V")
@@ -212,7 +208,6 @@ elif menu == "📂 Project":
                     st.success("✅ Gambar hasil paste!")
                     st.rerun()
         
-        # TAB 3: URL
         with tab_url:
             st.caption("Tempel link gambar (JPG, PNG, JPEG)")
             img_url = st.text_input("URL Gambar", placeholder="https://example.com/image.jpg")
@@ -228,14 +223,12 @@ elif menu == "📂 Project":
                 else:
                     st.warning("Masukkan URL heula.")
         
-        # TAB 4: YouTube (dengan fallback thumbnail)
         with tab_youtube:
             st.caption("Tempel link YouTube pikeun inspirasi visual")
             yt_url = st.text_input("URL YouTube", placeholder="https://www.youtube.com/watch?v=...")
             if yt_url:
                 thumbnails, video_id = get_youtube_thumbnail(yt_url)
                 if thumbnails:
-                    # Coba masing-masing thumbnail
                     thumbnail = None
                     for url in thumbnails:
                         try:
@@ -261,7 +254,6 @@ elif menu == "📂 Project":
                 else:
                     st.warning("Link YouTube teu valid.")
         
-        # TAB 5: Riset
         with tab_riset:
             st.caption("Tempel link artikel / riset pikeun rujukan")
             research_url = st.text_input("URL Riset", placeholder="https://example.com/article")
@@ -291,7 +283,6 @@ elif menu == "📂 Project":
                             st.session_state.research_links.pop(i)
                             st.rerun()
         
-        # --- INFO SUMBER GAMBAR ---
         if st.session_state.image_source:
             src = st.session_state.image_source
             st.markdown("---")
@@ -304,7 +295,6 @@ elif menu == "📂 Project":
                 st.session_state.gap_analysis = {}
                 st.rerun()
         
-        # --- REVISION HISTORY ---
         st.markdown("---")
         st.subheader("🔄 Revision History")
         if st.session_state.revisions:
@@ -332,7 +322,6 @@ elif menu == "🔍 Detector":
     else:
         if st.button("⚡ Analyze Image", type="primary"):
             with st.spinner("Analyzing Visual DNA & Gap Analysis..."):
-                # SIMULASI DETECTOR
                 st.session_state.detection_result = {
                     "Architecture": 91,
                     "Material": 98,
@@ -343,7 +332,6 @@ elif menu == "🔍 Detector":
                     "Confidence": 74
                 }
                 
-                # SIMULASI GAP ANALYSIS
                 st.session_state.gap_analysis = {
                     "channel": "JAZZ",
                     "confidence": 74,
@@ -619,4 +607,4 @@ elif menu == "📦 Export":
 
 # --- Footer ---
 st.sidebar.markdown("---")
-st.sidebar.caption("🎨 VPD v7.1 | Made with Streamlit")
+st.sidebar.caption("🎨 YOGANS BGM STUDIO v7.1 | Made with Streamlit")
